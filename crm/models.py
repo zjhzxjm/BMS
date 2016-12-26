@@ -12,7 +12,7 @@ class Customer(models.Model):
     phone = models.PositiveIntegerField('手机')
     call = models.PositiveIntegerField('电话')
     address = models.CharField('地址', max_length=50, help_text='最大只允许50个字符')
-    linker = models.ForeignKey(User)
+    linker = models.ForeignKey(User, verbose_name='联络人')
 
     class Meta:
         verbose_name = "客户管理"

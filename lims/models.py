@@ -30,3 +30,28 @@ class Barcode(models.Model):
 
     def __str__(self):
         return "%s" % self.name
+
+
+class Experiment(models.Model):
+    """
+    Experiment class
+    """
+    STATUS_CHOICES = (
+        ('WAI', '等待实验'),
+        ('EXT', '提取完成'),
+        ('QC', '质检完成'),
+        ('LIB', '建库完成'),
+    )
+    sample = models.ForeignKey(
+        'pm.Sample',
+        on_delete=models.CASCADE,
+        verbose_name='样品',
+    )
+    status = models.CharField('进度', max_length=3, choices=STATUS_CHOICES, default='WAI')
+
+    class Meta:
+        verbose_name = '1.实验管理'
+        verbose_name_plural = '1.实验管理'
+
+    def __str__(self):
+        return '%s-%s' % (self.sample, self.status)

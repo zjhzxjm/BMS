@@ -26,14 +26,11 @@ class Project(models.Model):
     description = models.TextField('项目简介', blank=True)
 
     class Meta:
-        verbose_name = '项目管理'
-        verbose_name_plural = '项目管理'
+        verbose_name = '1.项目管理'
+        verbose_name_plural = '1.项目管理'
 
     def __str__(self):
         return '%s' % self.name
-
-    def test(self):
-        return '1'
 
 
 class Library(models.Model):
@@ -50,6 +47,11 @@ class Library(models.Model):
         return '%s' % self.name
 
 
+class SampleManage(models.Manager):
+    def sample_count(self, keyword):
+        return self.filter(project=keyword).count()
+
+
 class Sample(models.Model):
     """
     Sample class
@@ -60,19 +62,18 @@ class Sample(models.Model):
         on_delete=models.CASCADE,
         verbose_name='项目名',
     )
-    library = models.ForeignKey(
-        Library,
-        on_delete=models.CASCADE,
-        verbose_name='排机文库',
-    )
     contract_data = models.PositiveIntegerField('合同数据量')
+    objects = SampleManage()
 
     class Meta:
-        verbose_name = '样品管理'
-        verbose_name_plural = '样品管理'
+        verbose_name = '2.样品管理'
+        verbose_name_plural = '2.样品管理'
 
     def __str__(self):
         return '%s' % self.name
+
+    def test(self):
+        return '1'
 
 
 class SequenceInfo(models.Model):

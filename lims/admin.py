@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Primer, Barcode
+# from .models import Primer, Barcode
+from .models import Experiment
 
 
 class PrimerAdmin(admin.ModelAdmin):
@@ -15,5 +16,14 @@ class BarcodeAdmin(admin.ModelAdmin):
     """
     list_display = ('name', 'sequence')
 
-admin.site.register(Primer, PrimerAdmin)
-admin.site.register(Barcode, BarcodeAdmin)
+
+class ExperimentAdmin(admin.ModelAdmin):
+    """
+    Admin class for experiment
+    """
+    list_display = ('sample', 'status')
+    readonly_fields = ['sample']
+
+# admin.site.register(Primer, PrimerAdmin)
+# admin.site.register(Barcode, BarcodeAdmin)
+admin.site.register(Experiment, ExperimentAdmin)
