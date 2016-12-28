@@ -4,6 +4,9 @@ from lims.models import Experiment
 from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
+from django.contrib.contenttypes.models import ContentType
+from django.template.response import TemplateResponse
+from django.contrib.admin import helpers
 
 
 class SampleResource(resources.ModelResource):
@@ -26,22 +29,29 @@ class SampleAdmin(ImportExportModelAdmin):
         return obj.project.contract_number
     project_contract_number.short_description = '合同号'
 
-    def make_sample_submit(self, request ,queryset):
+    def make_sample_submit(self, request, queryset):
         """
         批量下达任务提交任务
         :param request:
         :param queryset:
         :return:
         """
-        i = 0
-        for obj in queryset:
-            p = Project.objects.update(status='SSB')
-            e = Experiment.objects.create(sample=obj)
-            i += 1
-        if e and p:
-            self.message_user(request, '%s 个样品已成功提交到实验室' % i)
+        if request.POST.get('post'):
+            n = queryset.count()
+            # p = Project.objects.update(status='SSB')
+            for obj in queryset:
+                e = Experiment.objects.create(sample=obj)
+            if e:
+                self.message_user(request, '%s 个样品已成功提交到实验室' % n)
+            else:
+                self.message_user(request, '未能成功提交 %s' % e)
         else:
-            self.message_user(request, '未能成功提交 %s %s' % (e, rows_updated))
+            context = {
+                'title': '确定提交吗？',
+                'queryset': queryset,
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME
+            }
+            return TemplateResponse(request, "pm/sample_submit_confirmation.html", context)
     make_sample_submit.short_description = '提交样品到实验室'
 
 
