@@ -20,7 +20,7 @@ class SampleAdmin(ImportExportModelAdmin):
     Admin class for sample
     """
     resource_class = SampleResource
-    list_display = ('project_contract_number', 'project', 'name', 'contract_data')
+    list_display = ('project_contract_number', 'project', 'name', 'experiment_num', 'contract_data')
     ordering = ['project']
     list_filter = ['project']
     actions = ['make_sample_submit']
@@ -41,6 +41,8 @@ class SampleAdmin(ImportExportModelAdmin):
             # p = Project.objects.update(status='SSB')
             for obj in queryset:
                 e = Experiment.objects.create(sample=obj)
+                obj.experiment_num += 1
+                obj.save()
             if e:
                 self.message_user(request, '%s 个样品已成功提交到实验室' % n)
             else:

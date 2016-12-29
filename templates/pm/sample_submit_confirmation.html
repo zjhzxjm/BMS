@@ -14,7 +14,7 @@
 
 {% block content %}
     <form method="post">{% csrf_token %}
-    <p>以下样品将被提交：</p>
+    <p>以下{{ queryset.count }}个样品将被提交：</p>
     <ul>{{ queryset|unordered_list }}</ul>
     <div>
     {% for obj in queryset %}

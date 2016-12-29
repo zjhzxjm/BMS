@@ -62,6 +62,7 @@ class Sample(models.Model):
         on_delete=models.CASCADE,
         verbose_name='项目名',
     )
+    experiment_num = models.PositiveSmallIntegerField('实验次数', default=0)
     contract_data = models.PositiveIntegerField('合同数据量')
     objects = SampleManage()
 
