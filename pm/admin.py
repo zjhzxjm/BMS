@@ -4,7 +4,6 @@ from lims.models import Experiment
 from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
-from django.contrib.contenttypes.models import ContentType
 from django.template.response import TemplateResponse
 from django.contrib.admin import helpers
 
@@ -21,8 +20,11 @@ class SampleAdmin(ImportExportModelAdmin):
     """
     resource_class = SampleResource
     list_display = ('project_contract_number', 'project', 'name', 'experiment_num', 'contract_data')
+    list_display_links = None
     ordering = ['project']
-    list_filter = ['project']
+    list_filter = (
+        ('project', admin.RelatedOnlyFieldListFilter),
+    )
     actions = ['make_sample_submit']
 
     def project_contract_number(self, obj):
@@ -38,6 +40,7 @@ class SampleAdmin(ImportExportModelAdmin):
         """
         if request.POST.get('post'):
             n = queryset.count()
+            e = ''
             # p = Project.objects.update(status='SSB')
             for obj in queryset:
                 e = Experiment.objects.create(sample=obj)
@@ -56,6 +59,20 @@ class SampleAdmin(ImportExportModelAdmin):
             return TemplateResponse(request, "pm/sample_submit_confirmation.html", context)
     make_sample_submit.short_description = '提交样品到实验室'
 
+    def get_queryset(self, request):
+        # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
+        qs = super(SampleAdmin, self).get_queryset(request)
+        if request.user.is_superuser or request.user.has_perm('pm.delete_sample'):
+            return qs
+        return qs.filter(project__customer__linker=request.user)
+
+    def get_actions(self, request):
+        # 无权限人员取消actions
+        actions = super(SampleAdmin, self).get_actions(request)
+        if not request.user.has_perm('pm.delete_sample'):
+            actions = None
+        return actions
+
 
 class SampleInline(admin.TabularInline):
     model = Sample
@@ -66,8 +83,9 @@ class ProjectAdmin(admin.ModelAdmin):
     """
     Admin class for project
     """
-    list_display = ('id', 'contract_number', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date', 'color_status')
-    list_display_links = ['contract_number']
+    list_display = ('id', 'contract_number', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date',
+                    'color_status')
+    # list_display_links = ['contract_number']
     inlines = [
         SampleInline,
     ]
@@ -79,8 +97,8 @@ class ProjectAdmin(admin.ModelAdmin):
         return obj.customer.organization
     customer_organization.short_description = '单位'
 
-    # 状态节点样式化
     def color_status(self, obj):
+        # 状态节点样式化
         t = obj.status
         colors = ['red', 'yellow', 'blue', 'orange', 'pink', 'green']
         style = '<span style="color:{};">{}</span>'
@@ -98,14 +116,33 @@ class ProjectAdmin(admin.ModelAdmin):
             return format_html(style, colors[5], '完结',)
     color_status.short_description = '状态'
 
-    # 统计样品个数
     def count_sample(self, obj):
+        # 统计样品个数
         return Sample.objects.sample_count(obj)
     count_sample.short_description = '样品数'
 
-    # 批量设置状态
     def make_nst(self):
         pass
+
+    def get_queryset(self, request):
+        qs = super(ProjectAdmin, self).get_queryset(request)
+        # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
+        if request.user.is_superuser or (request.user.has_perm('pm.delete_project')):
+            return qs
+        return qs.filter(customer__linker=request.user)
+
+    def get_actions(self, request):
+        # 无权限人员取消actions
+        actions = super(ProjectAdmin, self).get_actions(request)
+        if not request.user.has_perm('pm.delete_project'):
+            actions = None
+        return actions
+
+    def get_list_display_links(self, request, list_display):
+        # 无权限人员取消链接
+        if not request.user.has_perm('pm.delete_project'):
+            return None
+        return ['contract_number']
 
 
 class SequenceInfoInline(admin.TabularInline):

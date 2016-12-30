@@ -50,8 +50,8 @@ class Experiment(models.Model):
     status = models.CharField('进度', max_length=3, choices=STATUS_CHOICES, default='WAI')
 
     class Meta:
-        verbose_name = '1.实验管理'
-        verbose_name_plural = '1.实验管理'
+        verbose_name = '实验管理'
+        verbose_name_plural = '实验管理'
 
     def __str__(self):
         return '%s-%s' % (self.sample, self.status)

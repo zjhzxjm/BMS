@@ -2,6 +2,7 @@ from django.contrib import admin
 # from .models import Primer, Barcode
 from .models import Experiment
 from pm.models import Sample
+from django.contrib import messages
 
 
 class PrimerAdmin(admin.ModelAdmin):
@@ -81,12 +82,33 @@ class ExperimentAdmin(admin.ModelAdmin):
     make_lib.short_description = '更新状态为 建库完成'
 
     def delete_selected(self, request, obj):
-        for o in obj.all():
+        n = obj.all().count()
+        w = obj.filter(status='WAI').count()
+        d = ''
+        for o in obj.filter(status='WAI'):
             o.sample.experiment_num -= 1
             o.sample.save()
-            o.delete()
-
+            d = o.delete()
+        if d and n == w:
+            self.message_user(request, '%s 个样品已成功退回到项目管理' % n)
+        else:
+            self.message_user(request, '有 %s 个样品需变更状态为等待实验才能退回' % (n-w), level=messages.WARNING)
     delete_selected.short_description = '将样品退回至项目管理'
+
+    def get_queryset(self, request):
+        # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
+        qs = super(ExperimentAdmin, self).get_queryset(request)
+        if request.user.is_superuser or request.user.has_perm('lims.delete_experiment') or \
+            request.user.has_perm('pm.delete_sample'):
+            return qs
+        return qs.filter(sample__project__customer__linker=request.user)
+
+    def get_actions(self, request):
+        # 无权限人员取消actions
+        actions = super(ExperimentAdmin, self).get_actions(request)
+        if not request.user.has_perm('lims.delete_experiment'):
+            actions = None
+        return actions
 
 # admin.site.register(Primer, PrimerAdmin)
 # admin.site.register(Barcode, BarcodeAdmin)
