@@ -10,6 +10,11 @@ class CustomerAdmin(admin.ModelAdmin):
     ordering = ['name']
     list_filter = ['organization']
     search_fields = ['name', 'organization', 'phone', 'call']
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'organization', 'email', 'phone', 'call', 'address')
+        }),
+    )
 
     def get_queryset(self, request):
         # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
@@ -17,5 +22,9 @@ class CustomerAdmin(admin.ModelAdmin):
         if request.user.is_superuser or request.user.has_perm('crm.delete_customer'):
             return qs
         return qs.filter(linker=request.user)
+
+    def save_model(self, request, obj, form, change):
+        obj.linker = request.user
+        obj.save()
 
 admin.site.register(Customer, CustomerAdmin)
