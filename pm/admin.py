@@ -19,7 +19,7 @@ class SampleAdmin(ImportExportModelAdmin):
     Admin class for sample
     """
     resource_class = SampleResource
-    list_display = ('project_contract_number', 'project', 'name', 'experiment_num', 'contract_data')
+    list_display = ('project', 'name', 'contract_data')
     list_display_links = None
     ordering = ['project']
     list_filter = (
@@ -40,7 +40,7 @@ class SampleAdmin(ImportExportModelAdmin):
         """
         if request.POST.get('post'):
             n = queryset.count()
-            e = ''
+            e = 0
             # p = Project.objects.update(status='SSB')
             for obj in queryset:
                 e = Experiment.objects.create(sample=obj)
@@ -58,6 +58,10 @@ class SampleAdmin(ImportExportModelAdmin):
             }
             return TemplateResponse(request, "pm/sample_submit_confirmation.html", context)
     make_sample_submit.short_description = '提交样品到实验室'
+
+    def make_nst(self, request, queryset):
+        rows_updated = queryset.update(status='NST')
+        # self.message_user(request, '%s 个项目状态变更为未启动')
 
     def get_queryset(self, request):
         # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
@@ -83,14 +87,14 @@ class ProjectAdmin(admin.ModelAdmin):
     """
     Admin class for project
     """
-    list_display = ('id', 'contract_number', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date',
+    list_display = ('id', 'contract', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date',
                     'color_status')
     # list_display_links = ['contract_number']
     inlines = [
         SampleInline,
     ]
+    raw_id_fields = ['customer']
     ordering = ['-id']
-    search_fields = ['contract_number', 'customer__name']
     list_filter = ['status', 'customer__organization', 'customer']
 
     def customer_organization(self, obj):

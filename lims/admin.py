@@ -23,14 +23,14 @@ class ExperimentAdmin(admin.ModelAdmin):
     """
     Admin class for experiment
     """
-    list_display = ('sample_project_contract_number', 'sample_project_name', 'sample', 'status')
-    list_display_links = None
-    readonly_fields = ['sample']
-    actions = ['make_wai', 'make_ext', 'make_qc', 'make_lib', 'delete_selected']
-    list_filter = ['status', 'sample__project__name', 'sample__project__contract_number']
+    # list_display = ('sample_project_contract_number', 'sample_project_name', 'sample', 'status')
+    # list_display_links = None
+    # readonly_fields = ['sample']
+    # actions = ['make_wai', 'make_ext', 'make_qc', 'make_lib', 'delete_selected']
+    # list_filter = ['status', 'sample__project__name', 'sample__project__contract_number']
 
     def sample_project_contract_number(self, obj):
-        return obj.sample.project.contract_number
+        return obj.sample.project.contract.contract_number
     sample_project_contract_number.short_description = '合同号'
 
     def sample_project_name(self, obj):

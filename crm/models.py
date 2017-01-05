@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 class Customer(models.Model):
     """
-    Customer class
+    客户管理模型
     """
     name = models.CharField('客户名', max_length=12, help_text='最大只允许12个字符')
     organization = models.CharField('单位', max_length=40, help_text='最大只允许40个字符')
@@ -20,3 +20,9 @@ class Customer(models.Model):
 
     def __str__(self):
         return "%s" % self.name
+
+
+class Intention(models.Model):
+    """
+    意向管理模型
+    """

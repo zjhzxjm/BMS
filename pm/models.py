@@ -9,17 +9,22 @@ class Project(models.Model):
     STATUS_CHOICES = (
         ('NST', '未启动'),
         ('SSB', '样品提交'),
-        ('QC', '质控完成'),
+        ('QC', '质检完成'),
         ('LIB', '建库完成'),
         ('SEQ', '测序完成'),
+        ('END', '完结'),
         ('FIN', '完成'),
         ('PAU', '暂停'),
     )
-    contract_number = models.CharField('合同号', max_length=15, unique=True)
-    name = models.CharField('项目名', max_length=20, help_text='最大只允许20个字符')
+    contract = models.ForeignKey(
+        'mm.Contract',
+        verbose_name='合同',
+        on_delete=models.CASCADE,
+    )
+    name = models.CharField('项目名', max_length=20, help_text='最多只允许20个字符')
     customer = models.ForeignKey(
         'crm.Customer',
-        verbose_name='客户',
+        verbose_name='客户'
     )
     init_date = models.DateTimeField('创建时间', auto_now_add=True)
     status = models.CharField('状态', max_length=3, choices=STATUS_CHOICES, default='NST')
@@ -30,7 +35,7 @@ class Project(models.Model):
         verbose_name_plural = '项目管理'
 
     def __str__(self):
-        return '%s' % self.name
+        return '%s' % self.contract__project_name
 
 
 class Library(models.Model):
@@ -62,7 +67,11 @@ class Sample(models.Model):
         on_delete=models.CASCADE,
         verbose_name='项目名',
     )
-    experiment_num = models.PositiveSmallIntegerField('实验次数', default=0)
+    experiment_num = models.PositiveSmallIntegerField('质检次数', default=0)
+    extract_num = models.PositiveSmallIntegerField('提取次数', default=0)
+    lib_16S_num = models.PositiveSmallIntegerField('16S建库次数', default=0)
+    lib_ITS_num = models.PositiveSmallIntegerField('ITS建库次数', default=0)
+    lib_frag_num = models.PositiveSmallIntegerField('小片段建库次数',default=0)
     contract_data = models.PositiveIntegerField('合同数据量')
     objects = SampleManage()
 
