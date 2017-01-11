@@ -7,6 +7,7 @@ class Contract(models.Model):
     name = models.CharField('合同名', max_length=20, help_text='最大只允许20个字符')
     salesman = models.ForeignKey(User, verbose_name='销售')
     price = models.DecimalField('单价', max_digits=7, decimal_places=2)
+    range = models.CharField('价格区间', max_length=20, help_text='最大只允许20个字符')
     total = models.DecimalField('总款', max_digits=12, decimal_places=2)
     send_date = models.DateField('合同寄出日', null=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
