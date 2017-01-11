@@ -35,7 +35,7 @@ class Project(models.Model):
         verbose_name_plural = '项目管理'
 
     def __str__(self):
-        return '%s' % self.contract__project_name
+        return '%s' % self.name
 
 
 class Library(models.Model):
@@ -67,7 +67,7 @@ class Sample(models.Model):
         on_delete=models.CASCADE,
         verbose_name='项目名',
     )
-    experiment_num = models.PositiveSmallIntegerField('质检次数', default=0)
+    qc_num = models.PositiveSmallIntegerField('质检次数', default=0)
     extract_num = models.PositiveSmallIntegerField('提取次数', default=0)
     lib_16S_num = models.PositiveSmallIntegerField('16S建库次数', default=0)
     lib_ITS_num = models.PositiveSmallIntegerField('ITS建库次数', default=0)

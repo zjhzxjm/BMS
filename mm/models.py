@@ -9,7 +9,7 @@ class Contract(models.Model):
     price = models.DecimalField('单价', max_digits=7, decimal_places=2)
     total = models.DecimalField('总款', max_digits=12, decimal_places=2)
     send_date = models.DateField('合同寄出日', null=True)
-    tracking_number = models.CharField('快递单号', max_length=15, unique=True, blank=True)
+    tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄到日', null=True)
 
     class Meta:
@@ -40,7 +40,7 @@ class Invoice(models.Model):
         verbose_name_plural = '开票管理'
 
     def __str__(self):
-        return '%f' % self.amount
+        return '%.2f' % self.amount
 
 
 

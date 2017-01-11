@@ -12,6 +12,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('contract', 'title', 'period', 'amount', 'submit')
     actions = ['make_invoice_submit']
     list_display_links = None
+    fields = ('contract', 'title', 'period', 'amount')
 
     def make_invoice_submit(self, request, queryset):
         """
@@ -62,6 +63,12 @@ class ContractAdmin(admin.ModelAdmin):
     raw_id_fields = ['salesman']
     actions = ['make_receive']
 
+    def get_formsets_with_inlines(self, request, obj=None):
+        for inline in self.get_inline_instances(request, obj):
+            if isinstance(inline, InvoiceInline) and obj is None:
+                continue
+            yield inline.get_formset(request, obj), inline
+
     def salesman_name(self, obj):
         """
         销售用户名或姓名显示
@@ -84,7 +91,7 @@ class ContractAdmin(admin.ModelAdmin):
         """
         if obj.tracking_number and not obj.send_date:
             obj.send_date = datetime.now()
-            obj.save()
+        obj.save()
     salesman_name.short_description = '销售'
 
     def make_receive(self, request, queryset):

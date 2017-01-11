@@ -19,7 +19,8 @@ class SampleAdmin(ImportExportModelAdmin):
     Admin class for sample
     """
     resource_class = SampleResource
-    list_display = ('project', 'name', 'contract_data')
+    list_display = ('project_contract_number', 'project', 'name', 'qc_num', 'extract_num', 'lib_16S_num', 'lib_ITS_num', 'lib_frag_num',
+                    'contract_data')
     list_display_links = None
     ordering = ['project']
     list_filter = (
@@ -28,7 +29,7 @@ class SampleAdmin(ImportExportModelAdmin):
     actions = ['make_sample_submit']
 
     def project_contract_number(self, obj):
-        return obj.project.contract_number
+        return obj.project.contract.contract_number
     project_contract_number.short_description = '合同号'
 
     def make_sample_submit(self, request, queryset):
@@ -89,7 +90,6 @@ class ProjectAdmin(admin.ModelAdmin):
     """
     list_display = ('id', 'contract', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date',
                     'color_status')
-    # list_display_links = ['contract_number']
     inlines = [
         SampleInline,
     ]
@@ -146,7 +146,7 @@ class ProjectAdmin(admin.ModelAdmin):
         # 无权限人员取消链接
         if not request.user.has_perm('pm.delete_project'):
             return None
-        return ['contract_number']
+        return ['name']
 
 
 class SequenceInfoInline(admin.TabularInline):
