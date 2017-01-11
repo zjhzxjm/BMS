@@ -84,9 +84,8 @@ class BillAdmin(admin.ModelAdmin):
         :return:
         """
         invoice_amount = obj.invoice.invoice.invoice.invoice.amount
-        current_invoice_amounts = Bill.objects.filter(invoice=obj.invoice).values_list('income', flat=True)
+        current_invoice_amounts = Bill.objects.filter(invoice=obj.invoice).exclude(id=obj.id).values_list('income', flat=True)
         sum_income = obj.income + sum(current_invoice_amounts)
-        print(sum_income)
         if not obj.invoice.invoice_code:
             messages.set_level(request, messages.WARNING)
             self.message_user(request, '不能对无单号发票登记进账', level=messages.WARNING)
