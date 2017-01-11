@@ -34,11 +34,12 @@ class Invoice(models.Model):
     title = models.CharField('发票抬头', max_length=25)
     period = models.CharField('款期', max_length=3, choices=PERIOD_CHOICES, default='FIS')
     amount = models.DecimalField('开票金额', max_digits=9, decimal_places=2)
+    note = models.TextField('备注')
     submit = models.NullBooleanField('提交开票', null=True)
 
     class Meta:
-        verbose_name = '开票管理'
-        verbose_name_plural = '开票管理'
+        verbose_name = '开票申请'
+        verbose_name_plural = '开票申请'
 
     def __str__(self):
         return '%.2f' % self.amount

@@ -9,10 +9,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     """
     Admin class for invoice
     """
-    list_display = ('contract', 'title', 'period', 'amount', 'submit')
+    list_display = ('contract', 'title', 'period', 'amount', 'note', 'submit')
     actions = ['make_invoice_submit']
     list_display_links = None
-    fields = ('contract', 'title', 'period', 'amount')
+    fields = ('contract', 'title', 'period', 'amount', 'note')
 
     def make_invoice_submit(self, request, queryset):
         """
@@ -37,10 +37,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     make_invoice_submit.short_description = '提交开票申请到财务'
 
 
-class InvoiceInline(admin.TabularInline):
+class InvoiceInline(admin.StackedInline):
     model = Invoice
     extra = 0
-    fields = ('title', 'period', 'amount')
+    fields = ('title', 'period', 'amount', 'note')
 
 
 class ContractAdmin(admin.ModelAdmin):

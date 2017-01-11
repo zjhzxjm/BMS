@@ -16,10 +16,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [
         BillInline,
     ]
-    readonly_fields = ('invoice_title', 'invoice_amount')
+    readonly_fields = ('invoice_title', 'invoice_amount', 'invoice_note')
     fieldsets = (
         ('申请信息', {
-           'fields': ('invoice_title', 'invoice_amount')
+           'fields': ('invoice_title', 'invoice_amount', 'invoice_note')
         }),
         ('开票信息', {
             'fields': ('invoice_code', )
@@ -33,6 +33,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     def invoice_amount(self, obj):
         return obj.invoice.amount
     invoice_amount.short_description = '发票金额'
+
+    def invoice_note(self, obj):
+        return obj.invoice.note
+    invoice_note.short_description = '备注'
 
     def bill_income(self, obj):
         current_income_amounts = Bill.objects.filter(invoice__id=obj.id).values_list('income', flat=True)
