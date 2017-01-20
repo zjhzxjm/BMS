@@ -8,6 +8,8 @@ class Invoice(models.Model):
     )
     invoice_code = models.CharField('发票号码', max_length=12)
     date = models.DateField('开票日期', null=True)
+    tracking_number = models.CharField('快递单号', max_length=15, blank=True)
+    send_date = models.DateField('寄出日期', null=True)
 
     class Meta:
         verbose_name = '发票管理'

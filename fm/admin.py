@@ -4,27 +4,67 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
+from django.forms.models import BaseInlineFormSet
+
+
+class InvoiceChangeList(ChangeList):
+    def get_results(self, *args, **kwargs):
+        super(InvoiceChangeList, self).get_results(*args, **kwargs)
+        q = self.result_list.aggregate(income_sum=Sum('bill__income'))
+        self.income_count = q['income_sum']
+
+
+class BillInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super(BillInlineFormSet, self).clean()
+        total = 0
+        for form in self.forms:
+            # print(form.cleaned_data)
+            if not form.is_valid():
+                return
+            if form.cleaned_data and not form.cleaned_data['DELETE']:
+                total += form.cleaned_data['income']
+        self.instance.__total__ = total
 
 
 class BillInline(admin.TabularInline):
     model = Bill
+    formset = BillInlineFormSet
     extra = 0
 
 
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_title', 'invoice_amount', 'bill_income', 'bill_receivable', 'invoice_code', 'date')
+    list_display = ('invoice_contract_number', 'invoice_contract_name', 'invoice_title', 'invoice_amount',
+                    'bill_income', 'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date')
+    list_display_links = ['invoice_title', 'invoice_amount']
+    date_hierarchy = 'date'
+    search_fields = ['invoice__title']
     inlines = [
         BillInline,
     ]
-    readonly_fields = ('invoice_title', 'invoice_amount', 'invoice_note')
+    # readonly_fields = ('invoice_title', 'invoice_amount', 'invoice_note')
     fieldsets = (
         ('申请信息', {
            'fields': ('invoice_title', 'invoice_amount', 'invoice_note')
         }),
         ('开票信息', {
             'fields': ('invoice_code', )
+        }),
+        ('邮寄信息', {
+            'fields': ('tracking_number', )
         })
     )
+
+    def get_changelist(self, request):
+        return InvoiceChangeList
+
+    def invoice_contract_number(self, obj):
+        return obj.invoice.contract.contract_number
+    invoice_contract_number.short_description = '合同号'
+
+    def invoice_contract_name(self, obj):
+        return obj.invoice.contract.name
+    invoice_contract_name.short_description = '合同名'
 
     def invoice_title(self, obj):
         return obj.invoice.title
@@ -57,14 +97,60 @@ class InvoiceAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.invoice_code and not obj.date:
             obj.date = datetime.now()
+        if obj.tracking_number and not obj.send_date:
+            obj.send_date = datetime.now()
         obj.save()
 
+    def save_formset(self, request, form, formset, change):
+        # print(formset.instance.__total__)
+        instances = formset.save(commit=False)
+        # print(instances[0].invoice.invoice.amount)
 
-class MyChangeList(ChangeList):
+        if instances:
+            sum_income = formset.instance.__total__
+            invoice_amount = instances[0].invoice.invoice.amount
+            if sum_income <= invoice_amount:
+                for instance in instances:
+                    instance.save()
+                formset.save_m2m()
+            else:
+                messages.set_level(request, messages.ERROR)
+                self.message_user(request, '进账总额 %.2f 超过开票金额 %.2f' % (sum_income, invoice_amount),
+                                  level=messages.ERROR)
+
+    def get_actions(self, request):
+        # 无权限人员取消actions
+        actions = super(InvoiceAdmin, self).get_actions(request)
+        if not request.user.has_perm('fm.delete_invoice'):
+            actions = None
+        return actions
+
+    def get_readonly_fields(self, request, obj=None):
+        if not request.user.has_perm('fm.delete_invoice'):
+            return ['invoice_title', 'invoice_amount', 'invoice_note', 'invoice_code', 'tracking_number']
+        return ['invoice_title', 'invoice_amount', 'invoice_note']
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        # add page不显示BillInline
+        for inline in self.get_inline_instances(request, obj):
+            if isinstance(inline, BillInline) and obj is None:
+                continue
+            if not obj.invoice_code:
+                continue
+            yield inline.get_formset(request, obj), inline
+
+
+    # def get_list_display_links(self, request, list_display):
+    #     if not request.user.has_perm('fm.delete_invoice'):
+    #         return None
+    #     return ['invoice_title', 'invoice_amount']
+
+
+class BillChangeList(ChangeList):
     def get_results(self, *args, **kwargs):
-        super(MyChangeList, self).get_results(*args, **kwargs)
-        q = self.result_list.aggregate(income_sum=Sum('income'))
-        self.income_count = q['income_sum']
+        super(BillChangeList, self).get_results(*args, **kwargs)
+        q = self.result_list.aggregate(Sum('income'))
+        self.income_count = q['income__sum']
 
 
 class BillAdmin(admin.ModelAdmin):
@@ -74,7 +160,7 @@ class BillAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'
 
     def get_changelist(self, request):
-        return MyChangeList
+        return BillChangeList
 
     def save_model(self, request, obj, form, change):
         """
@@ -104,4 +190,4 @@ class BillAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Invoice, InvoiceAdmin)
-admin.site.register(Bill, BillAdmin)
+# admin.site.register(Bill, BillAdmin)
