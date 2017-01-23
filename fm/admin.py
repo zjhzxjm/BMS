@@ -12,7 +12,10 @@ class InvoiceChangeList(ChangeList):
         super(InvoiceChangeList, self).get_results(*args, **kwargs)
         q_income = self.result_list.aggregate(income_sum=Sum('bill__income'))
         q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__invoice__invoice__amount'))
-        self.receivable_sum = q_amount['amount_sum'] - q_income['income_sum']
+        try:
+            self.receivable_sum = q_amount['amount_sum'] - q_income['income_sum']
+        except:
+            self.receivable_sum = ''
 
 
 class BillInlineFormSet(BaseInlineFormSet):
