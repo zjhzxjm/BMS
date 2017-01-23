@@ -10,8 +10,9 @@ from django.forms.models import BaseInlineFormSet
 class InvoiceChangeList(ChangeList):
     def get_results(self, *args, **kwargs):
         super(InvoiceChangeList, self).get_results(*args, **kwargs)
-        q = self.result_list.aggregate(income_sum=Sum('bill__income'))
-        self.income_count = q['income_sum']
+        q_income = self.result_list.aggregate(income_sum=Sum('bill__income'))
+        q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__invoice__invoice__amount'))
+        self.receivable_sum = q_amount['amount_sum'] - q_income['income_sum']
 
 
 class BillInlineFormSet(BaseInlineFormSet):
@@ -139,7 +140,9 @@ class InvoiceAdmin(admin.ModelAdmin):
                 continue
             yield inline.get_formset(request, obj), inline
 
-
+    # def get_queryset(self, request):
+    #     qs = super(InvoiceAdmin, self).get_queryset(request)
+    #     return qs.exclude(invoice_code='')
     # def get_list_display_links(self, request, list_display):
     #     if not request.user.has_perm('fm.delete_invoice'):
     #         return None
