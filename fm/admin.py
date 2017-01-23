@@ -103,10 +103,9 @@ class InvoiceAdmin(admin.ModelAdmin):
         obj.save()
 
     def save_formset(self, request, form, formset, change):
-        # print(formset.instance.__total__)
         instances = formset.save(commit=False)
-        # print(instances[0].invoice.invoice.amount)
-
+        for obj in formset.deleted_objects:
+            obj.delete()
         if instances:
             sum_income = formset.instance.__total__
             invoice_amount = instances[0].invoice.invoice.amount
