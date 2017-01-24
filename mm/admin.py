@@ -47,17 +47,21 @@ class ContractAdmin(admin.ModelAdmin):
     """
     Admin class for Contract
     """
-    list_display = ('contract_number', 'name', 'salesman_name', 'price', 'range', 'total', 'send_date', 'tracking_number', 'receive_date')
+    list_display = ('contract_number', 'name', 'salesman_name', 'price', 'range', 'total', 'send_date',
+                    'tracking_number', 'receive_date', 'file_link')
     inlines = [
         InvoiceInline,
     ]
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'salesman', 'price', 'range', 'total')
+            'fields': ('contract_number', 'name', 'salesman', ('price', 'range', 'total'))
         }),
         ('邮寄信息', {
             'fields': ('tracking_number',)
+        }),
+        ('上传合同', {
+            'fields': ('contract_file',)
         })
     )
     raw_id_fields = ['salesman']

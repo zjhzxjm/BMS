@@ -12,10 +12,19 @@ class Contract(models.Model):
     send_date = models.DateField('合同寄出日', null=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄到日', null=True)
+    contract_file = models.FileField('附件', upload_to='uploads/%Y/%m')
 
     class Meta:
         verbose_name = '合同管理'
         verbose_name_plural = '合同管理'
+
+    def file_link(self):
+        if self.contract_file:
+            return "<a href='%s'>下载</a>" % (self.contract_file.url,)
+        else:
+            return "未上传"
+    file_link.short_description = "附件"
+    file_link.allow_tags = True
 
     def __str__(self):
         return '%s' % self.contract_number
