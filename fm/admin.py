@@ -58,8 +58,8 @@ class InvoiceAdmin(admin.ModelAdmin):
     )
 
     def get_list_display_links(self, request, list_display):
-        # 没有新增发票权限人员，取消入口
-        if not request.user.has_perm('fm.add_invoice'):
+        # 没有删除发票权限人员，取消入口
+        if not request.user.has_perm('fm.delete_invoice'):
             return None
         return ['invoice_title', 'invoice_amount']
 
@@ -152,6 +152,11 @@ class InvoiceAdmin(admin.ModelAdmin):
         if request.user.is_superuser or request.user.has_perm('fm.delete_invoice'):
             return qs
         return qs.filter(invoice__contract__salesman=request.user)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_delete'] = False
+        return super(InvoiceAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
 
 class BillChangeList(ChangeList):
