@@ -23,7 +23,6 @@ class BillInlineFormSet(BaseInlineFormSet):
         super(BillInlineFormSet, self).clean()
         total = 0
         for form in self.forms:
-            # print(form.cleaned_data)
             if not form.is_valid():
                 return
             if form.cleaned_data and not form.cleaned_data['DELETE']:
@@ -46,7 +45,6 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [
         BillInline,
     ]
-    # readonly_fields = ('invoice_title', 'invoice_amount', 'invoice_note')
     fieldsets = (
         ('申请信息', {
            'fields': ('invoice_title', 'invoice_amount', 'invoice_note')
@@ -58,6 +56,12 @@ class InvoiceAdmin(admin.ModelAdmin):
             'fields': ('tracking_number', )
         })
     )
+
+    def get_list_display_links(self, request, list_display):
+        # 没有新增发票权限人员，取消入口
+        if not request.user.has_perm('fm.add_invoice'):
+            return None
+        return ['invoice_title', 'invoice_amount']
 
     def get_changelist(self, request):
         return InvoiceChangeList
@@ -122,9 +126,9 @@ class InvoiceAdmin(admin.ModelAdmin):
                                   level=messages.ERROR)
 
     def get_actions(self, request):
-        # 无权限人员取消actions
+        # 无删除或新增权限人员取消actions
         actions = super(InvoiceAdmin, self).get_actions(request)
-        if not request.user.has_perm('fm.delete_invoice'):
+        if not request.user.has_perm('fm.delete_invoice') or not request.user.has_perm('fm.add_invoice'):
             actions = None
         return actions
 
@@ -142,13 +146,12 @@ class InvoiceAdmin(admin.ModelAdmin):
                 continue
             yield inline.get_formset(request, obj), inline
 
-    # def get_queryset(self, request):
-    #     qs = super(InvoiceAdmin, self).get_queryset(request)
-    #     return qs.exclude(invoice_code='')
-    # def get_list_display_links(self, request, list_display):
-    #     if not request.user.has_perm('fm.delete_invoice'):
-    #         return None
-    #     return ['invoice_title', 'invoice_amount']
+    def get_queryset(self, request):
+        # 只允许管理员和拥有该模型删除权限的人员才能查看所有
+        qs = super(InvoiceAdmin, self).get_queryset(request)
+        if request.user.is_superuser or request.user.has_perm('fm.delete_invoice'):
+            return qs
+        return qs.filter(invoice__contract__salesman=request.user)
 
 
 class BillChangeList(ChangeList):

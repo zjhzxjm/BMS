@@ -92,22 +92,7 @@ class IntentionAdmin(admin.ModelAdmin):
         qs = super(IntentionAdmin, self).get_queryset(request)
         if request.user.is_superuser or request.user.has_perm('crm.delete_intention'):
             return qs
-        customers = Customer.objects.filter(linker=request.user)
-        for customer in customers:
-            return Intention.objects.filter(customer=customer)
-
-    def save_formset(self, request, form, formset, change):
-        # 历史记录禁止修改
-        instances = formset.save(commit=False)
-        for obj in formset.deleted_objects:
-            obj.delete()
-        if instances:
-            for instance in instances:
-                if instance.record_date < date.today():
-                    self.message_user(request, '%s 历史进展记录未被允许修改' % instance.record_date, level=messages.WARNING)
-                    continue
-                instance.save()
-            formset.save_m2m()
+        return qs.filter(customer__linker=request.user)
 
     def get_actions(self, request):
         # 无删除权限人员取消actions
@@ -129,6 +114,19 @@ class IntentionAdmin(admin.ModelAdmin):
         extra_context['show_save_and_add_another'] = False
         extra_context['show_save_and_continue'] = False
         return super(IntentionAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def save_formset(self, request, form, formset, change):
+        # 历史记录禁止修改
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        if instances:
+            for instance in instances:
+                if instance.record_date < date.today():
+                    self.message_user(request, '%s 历史进展记录未被允许修改' % instance.record_date, level=messages.WARNING)
+                    continue
+                instance.save()
+            formset.save_m2m()
 
 admin.site.register(Intention, IntentionAdmin)
 admin.site.register(Customer, CustomerAdmin)

@@ -67,12 +67,6 @@ class ContractAdmin(admin.ModelAdmin):
     raw_id_fields = ['salesman']
     actions = ['make_receive']
 
-    def get_formsets_with_inlines(self, request, obj=None):
-        for inline in self.get_inline_instances(request, obj):
-            if isinstance(inline, InvoiceInline) and obj is None:
-                continue
-            yield inline.get_formset(request, obj), inline
-
     def salesman_name(self, obj):
         """
         销售用户名或姓名显示
@@ -83,19 +77,6 @@ class ContractAdmin(admin.ModelAdmin):
         if name:
             return name
         return obj.salesman
-
-    def save_model(self, request, obj, form, change):
-        """
-        新增快递单号时自动记录时间戳
-        :param request:
-        :param obj:
-        :param form:
-        :param change:
-        :return:
-        """
-        if obj.tracking_number and not obj.send_date:
-            obj.send_date = datetime.now()
-        obj.save()
     salesman_name.short_description = '销售'
 
     def make_receive(self, request, queryset):
@@ -112,6 +93,31 @@ class ContractAdmin(admin.ModelAdmin):
             self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     make_receive.short_description = '登记所选合同已收到'
 
+    def get_formsets_with_inlines(self, request, obj=None):
+        for inline in self.get_inline_instances(request, obj):
+            if isinstance(inline, InvoiceInline) and obj is None:
+                continue
+            yield inline.get_formset(request, obj), inline
+
+    def get_queryset(self, request):
+        # 只允许管理员和该模型删除权限的人员才能查看所有样品
+        qs = super(ContractAdmin, self).get_queryset(request)
+        if request.user.is_superuser or request.user.has_perm('mm.delete_contract'):
+            return qs
+        return qs.filter(salesman=request.user)
+
+    def save_model(self, request, obj, form, change):
+        """
+        新增快递单号时自动记录时间戳
+        :param request:
+        :param obj:
+        :param form:
+        :param change:
+        :return:
+        """
+        if obj.tracking_number and not obj.send_date:
+            obj.send_date = datetime.now()
+        obj.save()
 
 admin.site.register(Contract, ContractAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
