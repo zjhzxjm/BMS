@@ -1,8 +1,10 @@
 from django.contrib import admin
 from .models import Invoice, Contract
 from fm.models import Invoice as fm_Invoice
+from fm.models import Bill
 from django.contrib import messages
 from datetime import datetime
+from django.db.models import Sum
 
 
 class InvoiceAdmin(admin.ModelAdmin):
@@ -47,8 +49,11 @@ class ContractAdmin(admin.ModelAdmin):
     """
     Admin class for Contract
     """
-    list_display = ('contract_number', 'name', 'salesman_name', 'price', 'range', 'total', 'send_date',
-                    'tracking_number', 'receive_date', 'file_link')
+    list_display = ('contract_number', 'name', 'salesman_name', 'price', 'range', 'total', 'contract_income',
+                    'send_date', 'tracking_number', 'receive_date', 'file_link')
+    list_filter = (
+        ('salesman', admin.RelatedOnlyFieldListFilter),
+    )
     inlines = [
         InvoiceInline,
     ]
@@ -78,6 +83,11 @@ class ContractAdmin(admin.ModelAdmin):
             return name
         return obj.salesman
     salesman_name.short_description = '销售'
+
+    def contract_income(self, obj):
+        q = Bill.objects.filter(invoice__invoice__contract=obj).aggregate(total_income=Sum('income'))
+        return q['total_income']
+    contract_income.short_description = '到款'
 
     def make_receive(self, request, queryset):
         """
