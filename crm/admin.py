@@ -108,11 +108,13 @@ class IntentionAdmin(admin.ModelAdmin):
         return ['customer_organization']
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
+        # 没有新增意向权限人员查看页面时隐藏所有按钮
         extra_context = extra_context or {}
-        extra_context['show_save'] = False
-        extra_context['show_save_as_new'] = False
-        extra_context['show_save_and_add_another'] = False
-        extra_context['show_save_and_continue'] = False
+        if not request.user.has_perm('crm.add_intention'):
+            extra_context['show_save'] = False
+            extra_context['show_save_as_new'] = False
+            # extra_context['show_save_and_add_another'] = False
+            extra_context['show_save_and_continue'] = False
         return super(IntentionAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_formset(self, request, form, formset, change):
