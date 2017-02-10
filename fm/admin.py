@@ -37,8 +37,9 @@ class BillInline(admin.TabularInline):
 
 
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_contract_number', 'invoice_contract_name', 'invoice_title', 'invoice_amount',
-                    'bill_income', 'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date')
+    list_display = ('invoice_contract_number', 'invoice_contract_name', 'invoice_period', 'invoice_title',
+                    'invoice_amount', 'bill_income', 'bill_receivable', 'invoice_code', 'date', 'tracking_number',
+                    'send_date')
     list_display_links = ['invoice_title', 'invoice_amount']
     date_hierarchy = 'date'
     search_fields = ['invoice__title']
@@ -73,6 +74,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     def invoice_contract_name(self, obj):
         return obj.invoice.contract.name
     invoice_contract_name.short_description = '合同名'
+
+    def invoice_period(self, obj):
+        return obj.invoice.get_period_display()
+    invoice_period.short_description = '款期'
 
     def invoice_title(self, obj):
         return obj.invoice.title
