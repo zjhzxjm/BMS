@@ -104,7 +104,8 @@ class IntentionAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         # 没有新增意向权限人员仅能查看信息
         if not request.user.has_perm('crm.add_intention'):
-            return ['customer_organization', 'customer', 'project_name', 'project_type', 'amount', 'closing_date', 'price']
+            return ['customer_organization', 'customer', 'project_name', 'project_type', 'amount', 'closing_date',
+                    'price']
         return ['customer_organization']
 
     def change_view(self, request, object_id, form_url='', extra_context=None):

@@ -138,7 +138,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         return actions
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('fm.delete_invoice'):
+        if not request.user.has_perm('fm.add_invoice'):
             return ['invoice_title', 'invoice_amount', 'invoice_note', 'invoice_code', 'tracking_number']
         return ['invoice_title', 'invoice_amount', 'invoice_note']
 
@@ -161,6 +161,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
         extra_context['show_delete'] = False
+        if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+            extra_context['show_save'] = False
+            extra_context['show_save_as_new'] = False
+            extra_context['show_save_and_continue'] = False
         return super(InvoiceAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
 
