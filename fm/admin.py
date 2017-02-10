@@ -33,7 +33,7 @@ class BillInlineFormSet(BaseInlineFormSet):
 class BillInline(admin.TabularInline):
     model = Bill
     formset = BillInlineFormSet
-    extra = 0
+    extra = 1
 
 
 class InvoiceAdmin(admin.ModelAdmin):

@@ -42,7 +42,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 class InvoiceInline(admin.StackedInline):
     model = Invoice
-    extra = 0
+    extra = 1
     fields = ('title', 'period', 'amount', 'note')
 
 
@@ -61,7 +61,7 @@ class ContractAdmin(admin.ModelAdmin):
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'salesman', ('price', 'range', 'total'))
+            'fields': ('contract_number', 'name', 'salesman', ('price', 'range'), ('fis_amount', 'fin_amount'))
         }),
         ('邮寄信息', {
             'fields': ('tracking_number',)
@@ -74,24 +74,26 @@ class ContractAdmin(admin.ModelAdmin):
     actions = ['make_receive']
 
     def salesman_name(self, obj):
-        """
-        销售用户名或姓名显示
-        :param obj:
-        :return:
-        """
+        # 销售用户名或姓名显示
         name = obj.salesman.last_name + obj.salesman.first_name
         if name:
             return name
         return obj.salesman
     salesman_name.short_description = '销售'
 
+    def total(self, obj):
+        # 总款计算并显示
+        amount = obj.fis_amount + obj.fin_amount
+        return amount
+    total.short_description = '总款'
+
     def fis_income(self, obj):
+        # 首款到账信息显示
         q_income = Bill.objects.filter(invoice__invoice__contract=obj).filter(invoice__invoice__period='FIS')
         income = q_income.aggregate(total_income=Sum('income'))['total_income'] or 0
         if income:
             date = q_income.last().date
-            amount = Invoice.objects.filter(contract=obj).filter(period='FIS').aggregate(total_amount=Sum('amount'))\
-                ['total_amount']
+            amount = obj.fis_amount
             t = amount - income
             if t > 0:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s / %s' % (income, amount))
@@ -101,12 +103,12 @@ class ContractAdmin(admin.ModelAdmin):
     fis_income.short_description = '首款'
 
     def fin_income(self, obj):
+        # 尾款到账信息显示
         q_income = Bill.objects.filter(invoice__invoice__contract=obj).filter(invoice__invoice__period='FIN')
         income = q_income.aggregate(total_income=Sum('income'))['total_income'] or 0
         if income:
             date = q_income.last().date
-            amount = Invoice.objects.filter(contract=obj).filter(period='FIN').aggregate(total_amount=Sum('amount'))\
-                ['total_amount']
+            amount = obj.fin_amount
             t = amount - income
             if t > 0:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s / %s' % (income, amount))

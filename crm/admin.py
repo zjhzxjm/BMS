@@ -33,7 +33,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 class IntentionRecordInline(admin.StackedInline):
     model = IntentionRecord
-    extra = 0
+    extra = 1
     exclude = ['record_date']
 
     def get_readonly_fields(self, request, obj=None):
