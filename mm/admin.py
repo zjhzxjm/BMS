@@ -71,6 +71,7 @@ class ContractAdmin(admin.ModelAdmin):
         })
     )
     raw_id_fields = ['salesman']
+    search_fields = ['contract_number', 'name', 'tracking_number']
     actions = ['make_receive']
 
     def salesman_name(self, obj):
@@ -138,9 +139,9 @@ class ContractAdmin(admin.ModelAdmin):
             yield inline.get_formset(request, obj), inline
 
     def get_queryset(self, request):
-        # 只允许管理员和该模型删除权限的人员才能查看所有样品
+        # 只允许管理员和该模型新增权限的人员才能查看所有样品
         qs = super(ContractAdmin, self).get_queryset(request)
-        if request.user.is_superuser or request.user.has_perm('mm.delete_contract'):
+        if request.user.is_superuser or request.user.has_perm('mm.add_contract'):
             return qs
         return qs.filter(salesman=request.user)
 

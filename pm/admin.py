@@ -1,139 +1,136 @@
 from django.contrib import admin
-from .models import Project, Sample, SequenceInfo, Library
-from lims.models import Experiment
+from .models import Project, QcSubmit, ExtSubmit, LibSubmit
+from lims.models import SampleInfo, QcTask, ExtTask, LibTask
+from django import forms
+from datetime import date, timedelta
+from fm.models import Bill
+from mm.models import Contract
+from django.db.models import Sum
 from django.utils.html import format_html
-from import_export import resources
-from import_export.admin import ImportExportModelAdmin
-from django.template.response import TemplateResponse
-from django.contrib.admin import helpers
 
 
-class SampleResource(resources.ModelResource):
-    class Meta:
-        model = Sample
-        fields = ('id', 'project', 'name', 'contract_data',)
+def add_business_days(from_date, number_of_days):
+    to_date = from_date
+    while number_of_days:
+        to_date += timedelta(1)
+        if to_date.weekday() < 5:
+            number_of_days -= 1
+    return to_date
 
 
-class SampleAdmin(ImportExportModelAdmin):
-    """
-    Admin class for sample
-    """
-    resource_class = SampleResource
-    list_display = ('project_contract_number', 'project', 'name', 'qc_num', 'extract_num', 'lib_16S_num', 'lib_ITS_num', 'lib_frag_num',
-                    'contract_data')
-    list_display_links = None
-    ordering = ['project']
-    list_filter = (
-        ('project', admin.RelatedOnlyFieldListFilter),
-    )
-    actions = ['make_sample_submit']
-
-    def project_contract_number(self, obj):
-        return obj.project.contract.contract_number
-    project_contract_number.short_description = '合同号'
-
-    def make_sample_submit(self, request, queryset):
-        """
-        批量下达任务提交任务
-        :param request:
-        :param queryset:
-        :return:
-        """
-        if request.POST.get('post'):
-            n = queryset.count()
-            e = 0
-            # p = Project.objects.update(status='SSB')
-            for obj in queryset:
-                e = Experiment.objects.create(sample=obj)
-                obj.experiment_num += 1
-                obj.save()
-            if e:
-                self.message_user(request, '%s 个样品已成功提交到实验室' % n)
-            else:
-                self.message_user(request, '未能成功提交 %s' % e)
-        else:
-            context = {
-                'title': '确定提交吗？',
-                'queryset': queryset,
-                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME
-            }
-            return TemplateResponse(request, "pm/sample_submit_confirmation.html", context)
-    make_sample_submit.short_description = '提交样品到实验室'
-
-    def make_nst(self, request, queryset):
-        rows_updated = queryset.update(status='NST')
-        # self.message_user(request, '%s 个项目状态变更为未启动')
-
-    def get_queryset(self, request):
-        # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
-        qs = super(SampleAdmin, self).get_queryset(request)
-        if request.user.is_superuser or request.user.has_perm('pm.delete_sample'):
-            return qs
-        return qs.filter(project__customer__linker=request.user)
-
-    def get_actions(self, request):
-        # 无权限人员取消actions
-        actions = super(SampleAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_sample'):
-            actions = None
-        return actions
-
-
-class SampleInline(admin.TabularInline):
-    model = Sample
-    extra = 0
+def is_period_income(contract, period):
+    income = Bill.objects.filter(invoice__invoice__contract=contract).filter(invoice__invoice__period=period)\
+            .aggregate(total_income=Sum('income'))['total_income'] or 0
+    if period == 'FIS':
+        amount = Contract.objects.filter(contract_number=contract)[0].fis_amount
+    elif period == 'FIN':
+        amount = Contract.objects.filter(contract_number=contract)[0].fin_amount
+    return amount - income
 
 
 class ProjectAdmin(admin.ModelAdmin):
-    """
-    Admin class for project
-    """
-    list_display = ('id', 'contract', 'name', 'count_sample', 'customer', 'customer_organization', 'init_date',
-                    'color_status')
-    inlines = [
-        SampleInline,
-    ]
-    raw_id_fields = ['customer']
-    ordering = ['-id']
-    list_filter = ['status', 'customer__organization', 'customer']
+    list_display = ('contract', 'customer', 'name', 'service_type', 'data_amount', 'is_confirm', 'status', 'sample_num',
+                    'receive_date', 'due_date', 'qc_status', 'ext_status', 'lib_status')
+    list_editable = ['is_confirm']
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('contract', 'customer', 'name', 'service_type', 'data_amount')
+        }),
+        ('周期设置(工作日)', {
+           'fields': (('qc_cycle', 'ext_cycle', 'lib_cycle', 'ana_cycle'),)
+        }),
+    )
+    raw_id_fields = ['contract']
 
-    def customer_organization(self, obj):
-        return obj.customer.organization
-    customer_organization.short_description = '单位'
+    def status(self, obj):
+        if is_period_income(obj.contract, 'FIS') > 0:
+            return '待首款'
+        if obj.lib_date:
+            return '测序中'
+        if LibTask.objects.filter(sample__project=obj).count():
+            return '建库中'
+        if ExtTask.objects.filter(sample__project=obj).count():
+            return '提取中'
+        if QcTask.objects.filter(sample__project=obj).count():
+            return '质检中'
+        if is_period_income(obj.contract, 'FIS') == 0:
+            return '待确认'
+        return 1
+    status.short_description = '状态'
 
-    def color_status(self, obj):
-        # 状态节点样式化
-        t = obj.status
-        colors = ['red', 'yellow', 'blue', 'orange', 'pink', 'green']
-        style = '<span style="color:{};">{}</span>'
-        if t == 'NST':
-            return format_html(style, colors[0], '未启动',)
-        elif t == 'SSB':
-            return format_html(style, colors[1], '样品提交',)
-        elif t == 'QC':
-            return format_html(style, colors[2], '质控完成',)
-        elif t == 'LIB':
-            return format_html(style, colors[3], '建库完成',)
-        elif t == 'SEQ':
-            return format_html(style, colors[4], '测序完成',)
-        elif t == 'FIN':
-            return format_html(style, colors[5], '完结',)
-    color_status.short_description = '状态'
+    def sample_num(self, obj):
+        return SampleInfo.objects.filter(project=obj).count()
+    sample_num.short_description = '实际收样'
 
-    def count_sample(self, obj):
-        # 统计样品个数
-        return Sample.objects.sample_count(obj)
-    count_sample.short_description = '样品数'
+    def receive_date(self, obj):
+        qs_sample = SampleInfo.objects.filter(project=obj)
+        if qs_sample:
+            return qs_sample.last().receive_date
+    receive_date.short_description = '收样时间'
 
-    def make_nst(self):
-        pass
+    def qc_status(self, obj):
+        if not obj.due_date:
+            return '-'
+        total = QcTask.objects.filter(sample__project=obj).count()
+        done = QcTask.objects.filter(sample__project=obj).exclude(result=None).count()
+        if done != total or not total:
+            obj.qc_date = None
+            obj.save()
+            left = (obj.due_date - timedelta(obj.ana_cycle + obj.lib_cycle + obj.ext_cycle) - date.today()).days
+            if left >= 0:
+                return '%s/%s-余%s天' % (done, total, left)
+            else:
+                return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
+        elif not obj.qc_date:
+            obj.qc_date = date.today()
+            obj.save()
+        return obj.qc_date
+    qc_status.short_description = '质检进度'
+
+    def ext_status(self, obj):
+        if not obj.due_date:
+            return '-'
+        total = ExtTask.objects.filter(sample__project=obj).count()
+        done = ExtTask.objects.filter(sample__project=obj).exclude(result=None).count()
+        if done != total or not total:
+            obj.ext_date = None
+            obj.save()
+            left = (obj.due_date - timedelta(obj.ana_cycle + obj.lib_cycle) - date.today()).days
+            if left >= 0:
+                return '%s/%s-余%s天' % (done, total, left)
+            else:
+                return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
+        elif not obj.ext_date:
+            obj.ext_date = date.today()
+            obj.save()
+        return obj.ext_date
+    ext_status.short_description = '提取进度'
+
+    def lib_status(self, obj):
+        if not obj.due_date:
+            return '-'
+        total = LibTask.objects.filter(sample__project=obj).count()
+        done = LibTask.objects.filter(sample__project=obj).exclude(result=None).count()
+        if done != total or not total:
+            obj.lib_date = None
+            obj.save()
+            left = (obj.due_date - timedelta(obj.ana_cycle) - date.today()).days
+            if left >= 0:
+                return '%s/%s-余%s天' % (done, total, left)
+            else:
+                return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
+        elif not obj.lib_date:
+            obj.lib_date = date.today()
+            obj.save()
+        return obj.lib_date
+    lib_status.short_description = '建库进度'
 
     def get_queryset(self, request):
+        # 只允许管理员和拥有该模型新增权限的人员才能查看所有样品
         qs = super(ProjectAdmin, self).get_queryset(request)
-        # 只允许管理员和拥有该模型删除权限的人员才能查看所有样品
-        if request.user.is_superuser or (request.user.has_perm('pm.delete_project')):
+        if request.user.is_superuser or request.user.has_perm('pm.add_project'):
             return qs
-        return qs.filter(customer__linker=request.user)
+        return qs.filter(contract__salesman=request.user)
 
     def get_actions(self, request):
         # 无权限人员取消actions
@@ -142,38 +139,169 @@ class ProjectAdmin(admin.ModelAdmin):
             actions = None
         return actions
 
-    def get_list_display_links(self, request, list_display):
-        # 无权限人员取消链接
-        if not request.user.has_perm('pm.delete_project'):
-            return None
-        return ['name']
+
+class QcSubmitForm(forms.ModelForm):
+    # 已经质检合格或正在质检的样品不显示
+    def __init__(self, *args, **kwargs):
+        forms.ModelForm.__init__(self, *args, **kwargs)
+        if 'sample' in self.fields:
+            values = QcTask.objects.exclude(result=False).values_list('sample__pk', flat=True)
+            self.fields['sample'].queryset = SampleInfo.is_qc_objects.exclude(id__in=list(set(values)))
+
+    def clean(self):
+        self.instance.__sample__ = self.cleaned_data['sample']
 
 
-class SequenceInfoInline(admin.TabularInline):
-    model = SequenceInfo
-    raw_id_fields = ('sample',)
+class QcSubmitAdmin(admin.ModelAdmin):
+    form = QcSubmitForm
+    list_display = ['slug', 'contract_count', 'project_count', 'sample_count', 'date', 'is_submit']
+    filter_horizontal = ('sample',)
+    fields = ('slug', 'date', 'sample', 'is_submit')
+
+    def contract_count(self, obj):
+        return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    contract_count.short_description = '合同数'
+
+    def project_count(self, obj):
+        return len(set([i.project.name for i in obj.sample.all()]))
+    project_count.short_description = '项目数'
+
+    def sample_count(self, obj):
+        return obj.sample.all().count()
+    sample_count.short_description = '样品数'
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.is_submit:
+            return ['slug', 'date', 'sample', 'is_submit']
+        return ['slug', 'date']
+
+    def save_model(self, request, obj, form, change):
+        # 选中提交复选框时自动记录提交时间
+        if obj.is_submit and not obj.date:
+            obj.date = date.today()
+            projects = []
+            for sample in form.instance.__sample__:
+                QcTask.objects.create(sample=sample)
+                projects.append(sample.project)
+            for i in set(projects):
+                print(i.due_date)
+                if not i.due_date:
+                    print(i.qc_cycle)
+                    cycle = i.qc_cycle + i.ext_cycle + i.lib_cycle + i.ana_cycle
+                    print(cycle)
+                    i.due_date = add_business_days(date.today(), cycle)
+                    i.save()
+        obj.save()
 
 
-class LibraryAdmin(admin.ModelAdmin):
-    """
-    Admin class for library
-    """
-    list_display = ('name',)
-    inlines = [
-        SequenceInfoInline,
-    ]
+class ExtSubmitForm(forms.ModelForm):
+    # 如果需要质检的显示已经合格的样品，已经提取合格的或正在提取的不显示
+    def __init__(self, *args, **kwargs):
+        forms.ModelForm.__init__(self, *args, **kwargs)
+        if 'sample' in self.fields:
+            qc_values = set(SampleInfo.is_qc_objects.values_list('pk', flat=True))\
+                        - set(QcTask.objects.filter(result=True).values_list('sample__pk', flat=True))
+            ext_values = ExtTask.objects.exclude(result=False).values_list('sample__pk', flat=True)
+            self.fields['sample'].queryset = SampleInfo.is_ext_objects.exclude(id__in=list(qc_values))\
+                .exclude(id__in=list(set(ext_values)))
+
+    def clean(self):
+        self.instance.__sample__ = self.cleaned_data['sample']
 
 
-    # def sample_project(self, obj):
-    #     return obj.sample.project
-    # sample_project.short_description = '项目'
-    #
-    # def sample_contract_data(self, obj):
-    #     return obj.sample.contract_data
-    # sample_contract_data.short_description = '合同数据量'
+class ExtSubmitAdmin(admin.ModelAdmin):
+    form = ExtSubmitForm
+    list_display = ['slug', 'contract_count', 'project_count', 'sample_count', 'date', 'is_submit']
+    filter_horizontal = ('sample',)
+    fields = ('slug', 'date', 'sample', 'is_submit')
 
-admin.site.register(Sample, SampleAdmin)
+    def contract_count(self, obj):
+        return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    contract_count.short_description = '合同数'
+
+    def project_count(self, obj):
+        return len(set([i.project.name for i in obj.sample.all()]))
+    project_count.short_description = '项目数'
+
+    def sample_count(self, obj):
+        return obj.sample.all().count()
+    sample_count.short_description = '样品数'
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.is_submit:
+            return ['slug', 'date', 'sample', 'is_submit']
+        return ['slug', 'date']
+
+    def save_model(self, request, obj, form, change):
+        # 选中提交复选框时自动记录提交时间
+        if obj.is_submit and not obj.date:
+            obj.date = date.today()
+            projects = []
+            for sample in form.instance.__sample__:
+                ExtTask.objects.create(sample=sample)
+                projects.append(sample.project)
+            for i in set(projects):
+                if not i.due_date:
+                    cycle = i.ext_cycle + i.lib_cycle + i.ana_cycle
+                    i.due_date = add_business_days(date.today(), cycle)
+                    i.save()
+        obj.save()
+
+
+class LibSubmitForm(forms.ModelForm):
+    # 如果需要提取的显示已经合格的样品，已经建库合格的或正在建库的不显示
+    def __init__(self, *args, **kwargs):
+        forms.ModelForm.__init__(self, *args, **kwargs)
+        if 'sample' in self.fields:
+            ext_values = set(SampleInfo.is_ext_objects.values_list('pk', flat=True))\
+                         - set(ExtTask.objects.filter(result=True).values_list('sample__pk', flat=True))
+            lib_values = LibTask.objects.exclude(result=False).values_list('sample__pk', flat=True)
+            self.fields['sample'].queryset = SampleInfo.is_lib_objects.exclude(id__in=list(ext_values))\
+                .exclude(id__in=list(set(lib_values)))
+
+    def clean(self):
+        self.instance.__sample__ = self.cleaned_data['sample']
+
+class LibSubmitAdmin(admin.ModelAdmin):
+    form = LibSubmitForm
+    list_display = ['slug', 'contract_count', 'project_count', 'sample_count', 'date', 'is_submit']
+    filter_horizontal = ('sample',)
+    fields = ('slug', 'date', 'sample', 'is_submit')
+
+    def contract_count(self, obj):
+        return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    contract_count.short_description = '合同数'
+
+    def project_count(self, obj):
+        return len(set([i.project.name for i in obj.sample.all()]))
+    project_count.short_description = '项目数'
+
+    def sample_count(self, obj):
+        return obj.sample.all().count()
+    sample_count.short_description = '样品数'
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.is_submit:
+            return ['slug', 'date', 'sample', 'is_submit']
+        return ['slug', 'date']
+
+    def save_model(self, request, obj, form, change):
+        # 选中提交复选框时自动记录提交时间
+        if obj.is_submit and not obj.date:
+            obj.date = date.today()
+            projects = []
+            for sample in form.instance.__sample__:
+                LibTask.objects.create(sample=sample)
+                projects.append(sample.project)
+            for i in set(projects):
+                if not i.due_date:
+                    cycle = i.lib_cycle + i.ana_cycle
+                    i.due_date = add_business_days(date.today(), cycle)
+                    i.save()
+        obj.save()
+
+
 admin.site.register(Project, ProjectAdmin)
-# admin.site.register(Library, LibraryAdmin)
-
-
+admin.site.register(QcSubmit, QcSubmitAdmin)
+admin.site.register(ExtSubmit, ExtSubmitAdmin)
+admin.site.register(LibSubmit, LibSubmitAdmin)
