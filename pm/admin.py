@@ -104,17 +104,15 @@ class ProjectAdmin(admin.ModelAdmin):
         total = QcTask.objects.filter(sample__project=obj).count()
         done = QcTask.objects.filter(sample__project=obj).exclude(result=None).count()
         if done != total or not total:
-            obj.qc_date = None
-            obj.save()
             left = (obj.due_date - timedelta(obj.ana_cycle + obj.lib_cycle + obj.ext_cycle) - date.today()).days
             if left >= 0:
                 return '%s/%s-余%s天' % (done, total, left)
             else:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
-        elif not obj.qc_date:
-            obj.qc_date = date.today()
+        else:
+            obj.qc_date = QcTask.objects.filter(sample__project=obj).order_by('-date').first().date
             obj.save()
-        return obj.qc_date
+            return obj.qc_date
     qc_status.short_description = '质检进度'
 
     def ext_status(self, obj):
@@ -123,17 +121,15 @@ class ProjectAdmin(admin.ModelAdmin):
         total = ExtTask.objects.filter(sample__project=obj).count()
         done = ExtTask.objects.filter(sample__project=obj).exclude(result=None).count()
         if done != total or not total:
-            obj.ext_date = None
-            obj.save()
             left = (obj.due_date - timedelta(obj.ana_cycle + obj.lib_cycle) - date.today()).days
             if left >= 0:
                 return '%s/%s-余%s天' % (done, total, left)
             else:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
-        elif not obj.ext_date:
-            obj.ext_date = date.today()
+        else:
+            obj.ext_date = ExtTask.objects.filter(sample__project=obj).order_by('-date').first().date
             obj.save()
-        return obj.ext_date
+            return obj.ext_date
     ext_status.short_description = '提取进度'
 
     def lib_status(self, obj):
@@ -142,17 +138,15 @@ class ProjectAdmin(admin.ModelAdmin):
         total = LibTask.objects.filter(sample__project=obj).count()
         done = LibTask.objects.filter(sample__project=obj).exclude(result=None).count()
         if done != total or not total:
-            obj.lib_date = None
-            obj.save()
             left = (obj.due_date - timedelta(obj.ana_cycle) - date.today()).days
             if left >= 0:
                 return '%s/%s-余%s天' % (done, total, left)
             else:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s/%s-延%s天' % (done, total, -left))
-        elif not obj.lib_date:
-            obj.lib_date = date.today()
+        else:
+            obj.lib_date = LibTask.objects.filter(sample__project=obj).order_by('-date').first().date
             obj.save()
-        return obj.lib_date
+            return obj.lib_date
     lib_status.short_description = '建库进度'
 
     def get_queryset(self, request):
