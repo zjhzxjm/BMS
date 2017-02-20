@@ -28,10 +28,40 @@ def is_period_income(contract, period):
     return amount - income
 
 
+class StatusListFilter(admin.SimpleListFilter):
+    title = '项目状态'
+    parameter_name = 'status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('FIS', '待首款'),
+            ('ENS', '待确认'),
+            ('QC', '质检中'),
+            ('EXT', '提取中'),
+            ('LIB', '建库中'),
+            ('SEQ', '测序中'),
+            ('ANA', '分析中'),
+            ('FIN', '待尾款'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'FIS':
+            return queryset.filter(contract__fis_date=None)
+        if self.value() == 'ENS':
+            return queryset.exclude(contract__fis_date=None).filter(is_confirm=False)
+        if self.value() == 'QC':
+            return queryset.filter(is_confirm=True).filter(qc_date=None)
+        if self.value() == 'EXT':
+            return queryset.filter(is_confirm=True).exclude(qc_date=None).filter(ext_date=None)
+        if self.value() == 'LIB':
+            return queryset.filter(is_confirm=True).exclude(qc_date=None).exclude(ext_date=None).filter(lib_date=None)
+
+
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ('contract', 'customer', 'name', 'service_type', 'data_amount', 'is_confirm', 'status', 'sample_num',
                     'receive_date', 'due_date', 'qc_status', 'ext_status', 'lib_status')
     list_editable = ['is_confirm']
+    list_filter = [StatusListFilter]
     fieldsets = (
         ('基本信息', {
             'fields': ('contract', 'customer', 'name', 'service_type', 'data_amount')

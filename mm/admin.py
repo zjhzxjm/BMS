@@ -99,8 +99,10 @@ class ContractAdmin(admin.ModelAdmin):
             if t > 0:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s / %s' % (income, amount))
             else:
+                obj.fis_date = date
+                obj.save()
                 return '%s/%s' % (income, date)
-        return '0'
+        return '0/%s' % obj.fis_amount
     fis_income.short_description = '首款'
 
     def fin_income(self, obj):
@@ -114,8 +116,10 @@ class ContractAdmin(admin.ModelAdmin):
             if t > 0:
                 return format_html('<span style="color:{};">{}</span>', 'red', '%s / %s' % (income, amount))
             else:
+                obj.fin_date = date
+                obj.save()
                 return '%s/%s' % (income, date)
-        return '0'
+        return '0/%s' % obj.fin_amount
     fin_income.short_description = '尾款'
 
     def make_receive(self, request, queryset):
