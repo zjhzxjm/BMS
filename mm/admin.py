@@ -136,6 +136,11 @@ class ContractAdmin(admin.ModelAdmin):
             self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     make_receive.short_description = '登记所选合同已收到'
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj.send_date:
+            return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount']
+        return ['']
+
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
             if isinstance(inline, InvoiceInline) and obj is None:

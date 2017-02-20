@@ -14,7 +14,7 @@ class InvoiceChangeList(ChangeList):
         q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__invoice__invoice__amount'))
         try:
             self.receivable_sum = q_amount['amount_sum'] - q_income['income_sum']
-        except:
+        except KeyError:
             self.receivable_sum = ''
 
 

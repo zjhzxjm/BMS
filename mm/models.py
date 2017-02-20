@@ -3,11 +3,11 @@ from django.contrib.auth.models import User
 
 
 class Contract(models.Model):
-    contract_number = models.CharField('合同号', max_length=15, unique=True, help_text='最大只允许15个字符')
+    contract_number = models.CharField('合同号', max_length=15, unique=True)
     name = models.CharField('合同名', max_length=100)
     salesman = models.ForeignKey(User, verbose_name='销售')
     price = models.DecimalField('单价', max_digits=7, decimal_places=2)
-    range = models.CharField('价格区间', max_length=20, help_text='最大只允许20个字符')
+    range = models.CharField('价格区间', max_length=20)
     fis_amount = models.DecimalField('首款额', max_digits=12, decimal_places=2)
     fis_date = models.DateField('首款到款日', blank=True, null=True)
     fin_amount = models.DecimalField('尾款额', max_digits=12, decimal_places=2)
