@@ -12,10 +12,10 @@ class Project(models.Model):
     name = models.CharField('项目名', max_length=100)
     service_type = models.CharField('服务类型', max_length=50)
     data_amount = models.PositiveIntegerField('数据要求')
-    qc_cycle = models.PositiveIntegerField('质检周期')
-    qc_date = models.DateField('质检完成日', blank=True, null=True)
     ext_cycle = models.PositiveIntegerField('提取周期')
     ext_date = models.DateField('提取完成日', blank=True, null=True)
+    qc_cycle = models.PositiveIntegerField('质检周期')
+    qc_date = models.DateField('质检完成日', blank=True, null=True)
     lib_cycle = models.PositiveIntegerField('建库周期')
     lib_date = models.DateField('建库完成日', blank=True, null=True)
     ana_cycle = models.PositiveIntegerField('分析周期')
@@ -31,29 +31,6 @@ class Project(models.Model):
 
     def __str__(self):
         return '%s' % self.name
-
-
-class QcSubmit(models.Model):
-    slug = models.SlugField('任务号', allow_unicode=True)
-    sample = models.ManyToManyField(
-        'lims.SampleInfo',
-        verbose_name='样品',
-    )
-    date = models.DateField('提交时间', blank=True, null=True)
-    is_submit = models.BooleanField('提交')
-
-    def save(self, *args, **kwargs):
-        super(QcSubmit, self).save(*args, **kwargs)
-        if not self.slug:
-            self.slug = "质检任务 #" + str(self.id)
-            self.save()
-
-    class Meta:
-        verbose_name = '1质检任务下单'
-        verbose_name_plural = '1质检任务下单'
-
-    def __str__(self):
-        return '%s' % self.slug
 
 
 class ExtSubmit(models.Model):
@@ -72,8 +49,31 @@ class ExtSubmit(models.Model):
             self.save()
 
     class Meta:
-        verbose_name = '2提取任务下单'
-        verbose_name_plural = '2提取任务下单'
+        verbose_name = '1提取任务下单'
+        verbose_name_plural = '1提取任务下单'
+
+    def __str__(self):
+        return '%s' % self.slug
+
+
+class QcSubmit(models.Model):
+    slug = models.SlugField('任务号', allow_unicode=True)
+    sample = models.ManyToManyField(
+        'lims.SampleInfo',
+        verbose_name='样品',
+    )
+    date = models.DateField('提交时间', blank=True, null=True)
+    is_submit = models.BooleanField('提交')
+
+    def save(self, *args, **kwargs):
+        super(QcSubmit, self).save(*args, **kwargs)
+        if not self.slug:
+            self.slug = "质检任务 #" + str(self.id)
+            self.save()
+
+    class Meta:
+        verbose_name = '2质检任务下单'
+        verbose_name_plural = '2质检任务下单'
 
     def __str__(self):
         return '%s' % self.slug

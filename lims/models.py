@@ -35,8 +35,8 @@ class SampleInfo(models.Model):
     name = models.CharField('样品名称', max_length=50)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3)
-    is_qc = models.BooleanField('需质检')
     is_ext = models.BooleanField('需提取')
+    is_qc = models.BooleanField('需质检')
     is_lib = models.BooleanField('需建库')
     receive_date = models.DateField('收样时间', auto_now_add=True)
     check = models.BooleanField('样品核对')
@@ -53,6 +53,29 @@ class SampleInfo(models.Model):
 
     def __str__(self):
         return '%s %s  [%s]' % (self.project, self.name, self.receive_date)
+
+
+class ExtTask(models.Model):
+    sample = models.ForeignKey(
+        SampleInfo,
+        verbose_name='样品',
+        on_delete=models.CASCADE,
+    )
+    date = models.DateField('提取时间', null=True)
+    staff = models.ForeignKey(
+        User,
+        verbose_name='实验员',
+        null=True
+    )
+    result = models.NullBooleanField('结论', null=True)
+    note = models.TextField('备注', blank=True, null=True)
+
+    class Meta:
+        verbose_name = '1提取实验'
+        verbose_name_plural = '1提取实验'
+
+    def __str__(self):
+        return '%s' % self.result
 
 
 class QcTask(models.Model):
@@ -74,31 +97,8 @@ class QcTask(models.Model):
     note = models.TextField('备注', blank=True, null=True)
 
     class Meta:
-        verbose_name = '1样品质检'
-        verbose_name_plural = '1样品质检'
-
-    def __str__(self):
-        return '%s' % self.result
-
-
-class ExtTask(models.Model):
-    sample = models.ForeignKey(
-        SampleInfo,
-        verbose_name='样品',
-        on_delete=models.CASCADE,
-    )
-    date = models.DateField('提取时间', null=True)
-    staff = models.ForeignKey(
-        User,
-        verbose_name='实验员',
-        null=True
-    )
-    result = models.NullBooleanField('结论', null=True)
-    note = models.TextField('备注', blank=True, null=True)
-
-    class Meta:
-        verbose_name = '2提取实验'
-        verbose_name_plural = '2提取实验'
+        verbose_name = '2样品质检'
+        verbose_name_plural = '2样品质检'
 
     def __str__(self):
         return '%s' % self.result

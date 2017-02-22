@@ -4,17 +4,17 @@ from django.contrib import messages
 
 
 class SampleInfoAdmin(admin.ModelAdmin):
-    list_display = ['project', 'type', 'species', 'name', 'volume', 'concentration', 'is_qc', 'is_ext', 'is_lib',
+    list_display = ['project', 'type', 'species', 'name', 'volume', 'concentration', 'is_ext', 'is_qc', 'is_lib',
                     'receive_date', 'check']
     list_editable = ['is_qc', 'is_ext', 'is_lib']
 
 
-class QcTaskAdmin(admin.ModelAdmin):
-    list_display = ['sample', 'date', 'staff', 'volume', 'concentration', 'total', 'result']
-
-
 class ExtTaskAdmin(admin.ModelAdmin):
     list_display = ['sample', 'date', 'result']
+
+
+class QcTaskAdmin(admin.ModelAdmin):
+    list_display = ['sample', 'date', 'staff', 'volume', 'concentration', 'total', 'result']
 
 
 class LibTaskAdmin(admin.ModelAdmin):
@@ -22,6 +22,6 @@ class LibTaskAdmin(admin.ModelAdmin):
                     'concentration', 'total', 'result']
 
 admin.site.register(SampleInfo, SampleInfoAdmin)
-admin.site.register(QcTask, QcTaskAdmin)
 admin.site.register(ExtTask, ExtTaskAdmin)
+admin.site.register(QcTask, QcTaskAdmin)
 admin.site.register(LibTask, LibTaskAdmin)
