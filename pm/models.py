@@ -5,11 +5,11 @@ from django.contrib.auth.models import User
 class Project(models.Model):
     contract = models.ForeignKey(
         'mm.Contract',
-        verbose_name='合同',
+        verbose_name='合同号',
         on_delete=models.CASCADE,
     )
     customer = models.CharField('客户', max_length=20)
-    name = models.CharField('项目名', max_length=100)
+    name = models.CharField('项目注解', max_length=100)
     service_type = models.CharField('服务类型', max_length=50)
     data_amount = models.PositiveIntegerField('数据要求')
     ext_cycle = models.PositiveIntegerField('提取周期')

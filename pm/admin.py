@@ -58,19 +58,27 @@ class StatusListFilter(admin.SimpleListFilter):
 
 
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('contract', 'customer', 'name', 'service_type', 'data_amount', 'is_confirm', 'status', 'sample_num',
-                    'receive_date', 'due_date', 'ext_status', 'qc_status', 'lib_status')
+    list_display = ('contract', 'customer', 'name', 'is_confirm', 'status', 'sample_num',
+                    'receive_date', 'contract_node', 'ext_status', 'qc_status', 'lib_status')
     list_editable = ['is_confirm']
     list_filter = [StatusListFilter]
     fieldsets = (
-        ('基本信息', {
-            'fields': ('contract', 'customer', 'name', 'service_type', 'data_amount')
+        ('合同信息', {
+           'fields': (('contract', 'contract_name'),)
+        }),
+        ('项目信息', {
+            'fields': ('customer', 'name', 'service_type', 'data_amount')
         }),
         ('周期设置(工作日)', {
            'fields': (('ext_cycle', 'qc_cycle', 'lib_cycle', 'ana_cycle'),)
         }),
     )
+    readonly_fields = ['contract_name']
     raw_id_fields = ['contract']
+
+    def contract_name(self, obj):
+        return obj.contract.name
+    contract_name.short_description = '项目名称'
 
     def status(self, obj):
         if is_period_income(obj.contract, 'FIS') > 0:
@@ -95,8 +103,15 @@ class ProjectAdmin(admin.ModelAdmin):
     def receive_date(self, obj):
         qs_sample = SampleInfo.objects.filter(project=obj)
         if qs_sample:
-            return qs_sample.last().receive_date
+            return qs_sample.last().receive_date.strftime('%Y-%m-%d')
     receive_date.short_description = '收样时间'
+
+    def contract_node(self, obj):
+        if obj.due_date:
+            return obj.due_date.strftime('%Y-%m-%d')
+        else:
+            return
+    contract_node.short_description = '合同节点'
 
     def ext_status(self, obj):
         if not obj.due_date:
