@@ -234,7 +234,7 @@ class QcSubmitForm(forms.ModelForm):
         if 'sample' in self.fields:
             ext_values = set(SampleInfo.is_ext_objects.values_list('pk', flat=True))\
                         - set(ExtTask.objects.filter(result=True).values_list('sample__pk', flat=True))
-            qc_values = QcTask.objects.exclude(result=False).values_list('sample__pk', flat=True)
+            qc_values = QcTask.objects.all().values_list('sample__pk', flat=True)
             self.fields['sample'].queryset = SampleInfo.is_qc_objects.exclude(id__in=list(ext_values))\
                 .exclude(id__in=list(set(qc_values)))
 
@@ -285,12 +285,12 @@ class QcSubmitAdmin(admin.ModelAdmin):
 
 
 class LibSubmitForm(forms.ModelForm):
-    # 如果需要质检的显示已经合格的样品，已经建库合格的或正在建库的不显示
+    # 如果需要质检的显示已经合格和可以风险建库的样品，已经建库合格的或正在建库的不显示
     def __init__(self, *args, **kwargs):
         forms.ModelForm.__init__(self, *args, **kwargs)
         if 'sample' in self.fields:
             qc_values = set(SampleInfo.is_ext_objects.values_list('pk', flat=True))\
-                         - set(QcTask.objects.filter(result=True).values_list('sample__pk', flat=True))
+                         - set(QcTask.objects.filter(result__in=[1, 2]).values_list('sample__pk', flat=True))
             lib_values = LibTask.objects.exclude(result=False).values_list('sample__pk', flat=True)
             self.fields['sample'].queryset = SampleInfo.is_lib_objects.exclude(id__in=list(qc_values))\
                 .exclude(id__in=list(set(lib_values)))

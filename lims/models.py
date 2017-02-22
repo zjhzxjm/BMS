@@ -3,18 +3,18 @@ from django.contrib.auth.models import User
 from pm.models import Project
 
 
-class IsQcManager(models.Manager):
-    # 返回通过项目确认、样品核对且需质检的样品
-    def get_queryset(self):
-        return super(IsQcManager,
-                     self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_qc=True)
-
-
 class IsExtManager(models.Manager):
     # 返回通过核对且需提取的样品
     def get_queryset(self):
         return super(IsExtManager,
                      self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_ext=True)
+
+
+class IsQcManager(models.Manager):
+    # 返回通过项目确认、样品核对且需质检的样品
+    def get_queryset(self):
+        return super(IsQcManager,
+                     self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_qc=True)
 
 
 class IsLibManager(models.Manager):
@@ -43,8 +43,8 @@ class SampleInfo(models.Model):
     note = models.TextField('备注', blank=True)
 
     objects = models.Manager()
-    is_qc_objects = IsQcManager()
     is_ext_objects = IsExtManager()
+    is_qc_objects = IsQcManager()
     is_lib_objects = IsLibManager()
 
     class Meta:
@@ -79,6 +79,11 @@ class ExtTask(models.Model):
 
 
 class QcTask(models.Model):
+    RESULTS_CHOICES = (
+        (1, '合格'),
+        (2, '不合格（可风险建库）'),
+        (3, '不合格（不可风险建库）'),
+    )
     sample = models.ForeignKey(
         SampleInfo,
         verbose_name='样品',
@@ -93,7 +98,11 @@ class QcTask(models.Model):
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3, null=True)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3, null=True)
     total = models.DecimalField('总量ng', max_digits=5, decimal_places=3, null=True)
-    result = models.NullBooleanField('结论', null=True)
+    result = models.IntegerField(
+        '结论',
+        choices=RESULTS_CHOICES,
+        null=True,
+    )
     note = models.TextField('备注', blank=True, null=True)
 
     class Meta:
