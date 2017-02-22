@@ -69,8 +69,11 @@ class ProjectAdmin(admin.ModelAdmin):
         ('项目信息', {
             'fields': ('customer', 'name', 'service_type', 'data_amount')
         }),
-        ('周期设置(工作日)', {
+        ('项目周期设置(工作日)', {
            'fields': (('ext_cycle', 'qc_cycle', 'lib_cycle', 'ana_cycle'),)
+        }),
+        ('实验周期设置(工作日)', {
+           'fields': (('ext_task_cycle', 'qc_task_cycle', 'lib_task_cycle'),)
         }),
     )
     readonly_fields = ['contract_name']
