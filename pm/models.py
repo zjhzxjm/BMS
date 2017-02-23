@@ -9,7 +9,7 @@ class Project(models.Model):
         on_delete=models.CASCADE,
     )
     customer = models.CharField('客户', max_length=20)
-    name = models.CharField('项目注解', max_length=100)
+    name = models.CharField('项目注解', max_length=100, blank=True)
     service_type = models.CharField('服务类型', max_length=50)
     data_amount = models.CharField('数据要求', max_length=10)
     ext_cycle = models.PositiveIntegerField('提取周期')
@@ -21,7 +21,12 @@ class Project(models.Model):
     lib_cycle = models.PositiveIntegerField('建库周期')
     lib_task_cycle = models.PositiveIntegerField('建库周期')
     lib_date = models.DateField('建库完成日', blank=True, null=True)
+    seq_cycle = models.PositiveIntegerField('测序周期')
+    seq_start_date = models.DateField('测序开始日', blank=True, null=True)
+    seq_end_date = models.DateField('测序完成日', blank=True, null=True)
     ana_cycle = models.PositiveIntegerField('分析周期')
+    ana_start_date = models.DateField('分析开始日', blank=True, null=True)
+    ana_end_date = models.DateField('分析完成日', blank=True, null=True)
     report_date = models.DateField('释放报告日', blank=True, null=True)
     result_date = models.DateField('释放结果日', blank=True, null=True)
     data_date = models.DateField('释放数据日', blank=True, null=True)
@@ -29,6 +34,7 @@ class Project(models.Model):
     is_confirm = models.BooleanField('确认', default=False)
 
     class Meta:
+        unique_together = ('contract', 'name')
         verbose_name = '0项目管理'
         verbose_name_plural = '0项目管理'
 
