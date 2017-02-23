@@ -6,12 +6,32 @@ from django.contrib import messages
 from datetime import datetime
 from django.db.models import Sum
 from django.utils.html import format_html
+from django import forms
+from django.forms.models import BaseInlineFormSet
+
+
+class InvoiceForm(forms.ModelForm):
+    # 开票金额与合同对应款期额校验 #22
+    def clean_amount(self):
+        obj_contract = Contract.objects.filter(contract_number=self.cleaned_data['contract']).first()
+        if self.cleaned_data['period'] == 'FIS':
+            q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIS')\
+                .aggregate(Sum('amount'))
+            if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fis_amount:
+                raise forms.ValidationError('首款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+        if self.cleaned_data['period'] == 'FIN':
+            q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIN')\
+                .aggregate(Sum('amount'))
+            if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fin_amount:
+                raise forms.ValidationError('尾款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+        return self.cleaned_data['amount']
 
 
 class InvoiceAdmin(admin.ModelAdmin):
     """
     Admin class for invoice
     """
+    form = InvoiceForm
     list_display = ('contract', 'title', 'period', 'amount', 'note', 'submit')
     actions = ['make_invoice_submit']
     list_display_links = None
@@ -20,9 +40,6 @@ class InvoiceAdmin(admin.ModelAdmin):
     def make_invoice_submit(self, request, queryset):
         """
         批量提交开票申请
-        :param request:
-        :param queryset:
-        :return:
         """
         i = ''
         n = 0
@@ -40,8 +57,26 @@ class InvoiceAdmin(admin.ModelAdmin):
     make_invoice_submit.short_description = '提交开票申请到财务'
 
 
+class InvoiceInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super(InvoiceInlineFormSet, self).clean()
+        total = {}
+        total['fis'] = 0
+        total['fin'] = 0
+        for form in self.forms:
+            if not form.is_valid():
+                return
+            if form.cleaned_data and not form.cleaned_data['DELETE']:
+                if form.cleaned_data['period'] == 'FIS':
+                    total['fis'] += form.cleaned_data['amount']
+                if form.cleaned_data['period'] == 'FIN':
+                    total['fin'] += form.cleaned_data['amount']
+            self.instance.__total__ = total
+
+
 class InvoiceInline(admin.StackedInline):
     model = Invoice
+    formset = InvoiceInlineFormSet
     extra = 1
     fields = ('title', 'period', 'amount', 'note')
 
@@ -154,14 +189,24 @@ class ContractAdmin(admin.ModelAdmin):
             return qs
         return qs.filter(salesman=request.user)
 
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        if instances:
+            fis_amount = instances[0].contract.fis_amount
+            fin_amount = instances[0].contract.fin_amount
+            if fis_amount >= formset.instance.__total__['fis'] and fin_amount >= formset.instance.__total__['fin']:
+                for instance in instances:
+                    instance.save()
+                formset.save_m2m()
+            else:
+                messages.set_level(request, messages.ERROR)
+                self.message_user(request, '开票申请总额超过对应款期可开额度,未成功添加开票', level=messages.ERROR)
+
     def save_model(self, request, obj, form, change):
         """
-        新增快递单号时自动记录时间戳
-        :param request:
-        :param obj:
-        :param form:
-        :param change:
-        :return:
+        1、新增快递单号时自动记录时间戳
         """
         if obj.tracking_number and not obj.send_date:
             obj.send_date = datetime.now()
