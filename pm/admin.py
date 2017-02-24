@@ -12,10 +12,16 @@ from django.contrib import messages
 
 def add_business_days(from_date, number_of_days):
     to_date = from_date
-    while number_of_days:
-        to_date += timedelta(1)
-        if to_date.weekday() < 5:
-            number_of_days -= 1
+    if number_of_days >= 0:
+        while number_of_days:
+            to_date += timedelta(1)
+            if to_date.weekday() < 5:
+                number_of_days -= 1
+    else:
+        while number_of_days:
+            to_date -= timedelta(1)
+            if to_date.weekday() < 5:
+                number_of_days += 1
     return to_date
 
 
@@ -358,11 +364,12 @@ class ProjectAdmin(admin.ModelAdmin):
         projects = []
         for obj in queryset:
             qs = SampleInfo.objects.filter(project=obj)
-            receive_date = qs.last().receive_date
-            cycle = obj.ext_cycle + obj.qc_cycle + obj.lib_cycle + obj.seq_cycle + obj.ana_cycle
-            due_date = add_business_days(receive_date, cycle)
-            obj.due_date = due_date
-            obj.save()
+            if not obj.is_ext and not obj.is_qc and not obj.is_lib:
+                receive_date = qs.last().receive_date
+                cycle = obj.ext_cycle + obj.qc_cycle + obj.lib_cycle + obj.seq_cycle + obj.ana_cycle
+                due_date = add_business_days(receive_date, cycle)
+                obj.due_date = due_date
+                obj.save()
             if qs.count():
                 projects += list(set(qs.values_list('project__pk', flat=True)))
         rows_updated = queryset.filter(id__in=projects).update(is_confirm=True)
@@ -374,6 +381,13 @@ class ProjectAdmin(admin.ModelAdmin):
             self.message_user(request, '所选项目不含样品或系统问题无法确认启动', level=messages.ERROR)
     make_confirm.short_description = '设置所选项目为确认可启动状态'
 
+    def save_model(self, request, obj, form, change):
+        if obj.due_date:
+            project = Project.objects.filter(name=obj).first()
+            old_cycle = project.ext_cycle + project.qc_cycle + project.lib_cycle + project.seq_cycle + project.ana_cycle
+            new_cycle = obj.ext_cycle + obj.qc_cycle + obj.lib_cycle + obj.seq_cycle + obj.ana_cycle
+            obj.due_date = add_business_days(project.due_date, new_cycle - old_cycle)
+        obj.save()
 
     # def get_changelist_formset(self, request, **kwargs):
     #     kwargs['formset'] = ProjectAdminFormSet
@@ -447,7 +461,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                 projects.append(sample.project)
             for i in set(projects):
                 if not i.due_date:
-                    cycle = i.ext_cycle + i.lib_cycle + i.ana_cycle
+                    cycle = i.ext_cycle + i.qc_cycle + i.lib_cycle + i.seq_cycle + i.ana_cycle
                     i.due_date = add_business_days(date.today(), cycle)
                     i.save()
         obj.save()
@@ -500,11 +514,8 @@ class QcSubmitAdmin(admin.ModelAdmin):
                 QcTask.objects.create(sample=sample)
                 projects.append(sample.project)
             for i in set(projects):
-                print(i.due_date)
                 if not i.due_date:
-                    print(i.qc_cycle)
-                    cycle = i.qc_cycle + i.ext_cycle + i.lib_cycle + i.ana_cycle
-                    print(cycle)
+                    cycle = i.qc_cycle + i.lib_cycle + i.seq_cycle + i.ana_cycle
                     i.due_date = add_business_days(date.today(), cycle)
                     i.save()
         obj.save()
@@ -558,7 +569,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
                 projects.append(sample.project)
             for i in set(projects):
                 if not i.due_date:
-                    cycle = i.lib_cycle + i.ana_cycle
+                    cycle = i.lib_cycle + i.seq_cycle + i.ana_cycle
                     i.due_date = add_business_days(date.today(), cycle)
                     i.save()
         obj.save()
