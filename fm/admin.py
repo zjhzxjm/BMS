@@ -64,7 +64,7 @@ class InvoiceAdmin(admin.ModelAdmin):
             return None
         return ['invoice_title', 'invoice_amount']
 
-    def get_changelist(self, request):
+    def get_changelist(self, **kwargs):
         return InvoiceChangeList
 
     def invoice_contract_number(self, obj):
