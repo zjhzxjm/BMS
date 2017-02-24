@@ -6,22 +6,22 @@ from pm.models import Project
 class IsExtManager(models.Manager):
     # 返回通过核对且需提取的样品
     def get_queryset(self):
-        return super(IsExtManager,
-                     self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_ext=True)
+        return super(IsExtManager, self).get_queryset().filter(project__is_confirm=True).filter(check=True)\
+            .filter(project__is_ext=True)
 
 
 class IsQcManager(models.Manager):
     # 返回通过项目确认、样品核对且需质检的样品
     def get_queryset(self):
-        return super(IsQcManager,
-                     self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_qc=True)
+        return super(IsQcManager, self).get_queryset().filter(project__is_confirm=True).filter(check=True)\
+            .filter(project__is_qc=True)
 
 
 class IsLibManager(models.Manager):
     # 返回通过核对且需建库的样品
     def get_queryset(self):
-        return super(IsLibManager,
-                     self).get_queryset().filter(project__is_confirm=True).filter(check=True).filter(is_lib=True)
+        return super(IsLibManager, self).get_queryset().filter(project__is_confirm=True).filter(check=True)\
+            .filter(project__is_lib=True)
 
 
 class SampleInfo(models.Model):
@@ -35,9 +35,6 @@ class SampleInfo(models.Model):
     name = models.CharField('样品名称', max_length=50)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3)
-    is_ext = models.BooleanField('需提取')
-    is_qc = models.BooleanField('需质检')
-    is_lib = models.BooleanField('需建库')
     receive_date = models.DateField('收样时间', auto_now_add=True)
     check = models.BooleanField('样品核对')
     note = models.TextField('备注', blank=True)

@@ -92,8 +92,11 @@ class ProjectForm(forms.ModelForm):
     def clean_seq_start_date(self):
         if not self.cleaned_data['seq_start_date']:
             return
-        lib_date = Project.objects.filter(contract=self.cleaned_data['contract'])\
-            .filter(name=self.cleaned_data['name']).first().lib_date
+        project = Project.objects.filter(contract=self.cleaned_data['contract']).filter(name=self.cleaned_data['name'])\
+            .first()
+        if not project.is_lib:
+            return self.cleaned_data['seq_start_date']
+        lib_date = project.lib_date
         if not lib_date:
             raise forms.ValidationError('尚未完成建库，无法记录测序时间')
         elif lib_date > self.cleaned_data['seq_start_date']:
@@ -168,7 +171,7 @@ class ProjectAdmin(admin.ModelAdmin):
            'fields': (('contract', 'contract_name'),)
         }),
         ('项目信息', {
-            'fields': ('customer', 'name', 'service_type', 'data_amount')
+            'fields': ('customer', 'name', ('service_type', 'is_ext', 'is_qc', 'is_lib'), 'data_amount')
         }),
         ('节点信息', {
             'fields': (('seq_start_date', 'seq_end_date'), ('ana_start_date', 'ana_end_date'),
@@ -245,7 +248,7 @@ class ProjectAdmin(admin.ModelAdmin):
     data_sub.short_description = '数据提交'
 
     def ext_status(self, obj):
-        if not obj.due_date:
+        if not obj.due_date or not obj.is_ext:
             return '-'
         total = ExtTask.objects.filter(sample__project=obj).count()
         done = ExtTask.objects.filter(sample__project=obj).exclude(result=None).count()
@@ -270,7 +273,7 @@ class ProjectAdmin(admin.ModelAdmin):
     ext_status.short_description = '提取进度'
 
     def qc_status(self, obj):
-        if not obj.due_date:
+        if not obj.due_date or not obj.is_qc:
             return '-'
         total = QcTask.objects.filter(sample__project=obj).count()
         done = QcTask.objects.filter(sample__project=obj).exclude(result=None).count()
@@ -293,7 +296,7 @@ class ProjectAdmin(admin.ModelAdmin):
     qc_status.short_description = '质检进度'
 
     def lib_status(self, obj):
-        if not obj.due_date:
+        if not obj.due_date or not obj.is_lib:
             return '-'
         total = LibTask.objects.filter(sample__project=obj).count()
         done = LibTask.objects.filter(sample__project=obj).exclude(result=None).count()
@@ -354,8 +357,12 @@ class ProjectAdmin(admin.ModelAdmin):
     def make_confirm(self, request, queryset):
         projects = []
         for obj in queryset:
-            print(SampleInfo.objects.filter(project=obj).count())
             qs = SampleInfo.objects.filter(project=obj)
+            receive_date = qs.last().receive_date
+            cycle = obj.ext_cycle + obj.qc_cycle + obj.lib_cycle + obj.seq_cycle + obj.ana_cycle
+            due_date = add_business_days(receive_date, cycle)
+            obj.due_date = due_date
+            obj.save()
             if qs.count():
                 projects += list(set(qs.values_list('project__pk', flat=True)))
         rows_updated = queryset.filter(id__in=projects).update(is_confirm=True)

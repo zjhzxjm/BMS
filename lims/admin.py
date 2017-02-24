@@ -4,9 +4,7 @@ from django.contrib import messages
 
 
 class SampleInfoAdmin(admin.ModelAdmin):
-    list_display = ['project', 'type', 'species', 'name', 'volume', 'concentration', 'is_ext', 'is_qc', 'is_lib',
-                    'receive_date', 'check']
-    list_editable = ['is_qc', 'is_ext', 'is_lib']
+    list_display = ['project', 'type', 'species', 'name', 'volume', 'concentration', 'receive_date', 'check']
 
 
 class ExtTaskAdmin(admin.ModelAdmin):
