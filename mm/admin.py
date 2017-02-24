@@ -158,12 +158,7 @@ class ContractAdmin(admin.ModelAdmin):
     fin_income.short_description = '尾款'
 
     def make_receive(self, request, queryset):
-        """
-        批量记录合同回寄时间戳
-        :param request:
-        :param queryset:
-        :return:
-        """
+        # 批量记录合同回寄时间戳
         rows_updated = queryset.update(receive_date=datetime.now())
         if rows_updated:
             self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
@@ -171,9 +166,20 @@ class ContractAdmin(admin.ModelAdmin):
             self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     make_receive.short_description = '登记所选合同已收到'
 
+    def get_list_display_links(self, request, list_display):
+        if not request.user.has_perm('mm.add_contract'):
+            return
+        return ['contract_number']
+
+    def get_actions(self, request):
+        actions = super(ContractAdmin, self).get_actions(request)
+        if not request.user.has_perm('mm.add_contract'):
+            actions = None
+        return actions
+
     def get_readonly_fields(self, request, obj=None):
         if obj.send_date:
-            return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount']
+            return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount', 'contract_file']
         return ['']
 
     def get_formsets_with_inlines(self, request, obj=None):
