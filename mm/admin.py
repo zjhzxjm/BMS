@@ -177,10 +177,10 @@ class ContractAdmin(admin.ModelAdmin):
             actions = None
         return actions
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj.send_date:
-            return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount', 'contract_file']
-        return ['']
+    # def get_readonly_fields(self, request, obj=None):
+        # if obj.send_date:
+        #     return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount', 'contract_file']
+        # return
 
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
