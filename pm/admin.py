@@ -7,7 +7,7 @@ from fm.models import Bill
 from mm.models import Contract
 from django.db.models import Sum
 from django.utils.html import format_html
-from django.forms import BaseModelFormSet
+from django.contrib import messages
 
 
 def add_business_days(from_date, number_of_days):
@@ -149,11 +149,11 @@ class ProjectForm(forms.ModelForm):
             raise forms.ValidationError('尾款未到不能操作该记录')
 
 
-class ProjectAdminFormSet(BaseModelFormSet):
-    def clean(self):
-        for p in self.cleaned_data:
-            if not SampleInfo.objects.filter(project=p['id']).count() and p['is_confirm']:
-                raise forms.ValidationError('未收到样品的项目无法确认启动')
+# class ProjectAdminFormSet(BaseModelFormSet):
+#     def clean(self):
+#         for p in self.cleaned_data:
+#             if not SampleInfo.objects.filter(project=p['id']).count() and p['is_confirm']:
+#                 raise forms.ValidationError('未收到样品的项目无法确认启动')
 
 
 class ProjectAdmin(admin.ModelAdmin):
@@ -161,7 +161,7 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ('contract_name', 'is_confirm', 'status', 'sample_num', 'receive_date',
                     'contract_node', 'ext_status', 'qc_status', 'lib_status', 'seq_status', 'ana_status',
                     'report_sub', 'result_sub', 'data_sub')
-    list_editable = ['is_confirm']
+    # list_editable = ['is_confirm']
     list_filter = [StatusListFilter]
     fieldsets = (
         ('合同信息', {
@@ -183,6 +183,7 @@ class ProjectAdmin(admin.ModelAdmin):
     )
     readonly_fields = ['contract_name']
     raw_id_fields = ['contract']
+    actions = ['make_confirm']
 
     def contract_name(self, obj):
         return obj.contract.name
@@ -350,9 +351,34 @@ class ProjectAdmin(admin.ModelAdmin):
                                    % (obj.ana_end_date.strftime('%Y%m%d'), -left))
     ana_status.short_description = '分析进度'
 
-    def get_changelist_formset(self, request, **kwargs):
-        kwargs['formset'] = ProjectAdminFormSet
-        return super(ProjectAdmin, self).get_changelist_formset(request, **kwargs)
+    def make_confirm(self, request, queryset):
+        projects = []
+        for obj in queryset:
+            print(SampleInfo.objects.filter(project=obj).count())
+            qs = SampleInfo.objects.filter(project=obj)
+            if qs.count():
+                projects += list(set(qs.values_list('project__pk', flat=True)))
+        rows_updated = queryset.filter(id__in=projects).update(is_confirm=True)
+        select_num = queryset.count()
+        if rows_updated:
+            self.message_user(request, '%s 个项目已经完成确认可启动, %s 个项目不含样品无法启动'
+                              % (rows_updated, select_num-rows_updated))
+        else:
+            self.message_user(request, '所选项目不含样品或系统问题无法确认启动', level=messages.ERROR)
+    make_confirm.short_description = '设置所选项目为确认可启动状态'
+
+
+    # def get_changelist_formset(self, request, **kwargs):
+    #     kwargs['formset'] = ProjectAdminFormSet
+    #     print(ProjectAdminFormSet)
+    #     print(super(ProjectAdmin, self).get_changelist_formset(request, **kwargs))
+    #     # if request.user.has_perm('pm.add_project')
+    #     return super(ProjectAdmin, self).get_changelist_formset(request, **kwargs)
+
+    def get_list_display_links(self, request, list_display):
+        if not request.user.has_perm('pm.add_project'):
+            return
+        return ['contract_name']
 
     def get_queryset(self, request):
         # 只允许管理员和拥有该模型新增权限的人员才能查看所有样品
@@ -364,7 +390,7 @@ class ProjectAdmin(admin.ModelAdmin):
     def get_actions(self, request):
         # 无权限人员取消actions
         actions = super(ProjectAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_project'):
+        if not request.user.has_perm('pm.add_project'):
             actions = None
         return actions
 
