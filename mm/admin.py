@@ -167,13 +167,13 @@ class ContractAdmin(admin.ModelAdmin):
     make_receive.short_description = '登记所选合同已收到'
 
     def get_list_display_links(self, request, list_display):
-        if not request.user.has_perm('mm.add_contract'):
+        if not request.user.has_perm('mm.delete_contract'):
             return
         return ['contract_number']
 
     def get_actions(self, request):
         actions = super(ContractAdmin, self).get_actions(request)
-        if not request.user.has_perm('mm.add_contract'):
+        if not request.user.has_perm('mm.delete_contract'):
             actions = None
         return actions
 
