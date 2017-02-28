@@ -36,7 +36,7 @@ class SampleInfo(models.Model):
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3)
     receive_date = models.DateField('收样时间', auto_now_add=True)
-    check = models.BooleanField('样品核对')
+    check = models.NullBooleanField('样品核对', null=True)
     note = models.TextField('备注', blank=True)
 
     objects = models.Manager()
@@ -45,6 +45,7 @@ class SampleInfo(models.Model):
     is_lib_objects = IsLibManager()
 
     class Meta:
+        unique_together = ('project', 'name', 'receive_date')
         verbose_name = '0样品管理'
         verbose_name_plural = '0样品管理'
 

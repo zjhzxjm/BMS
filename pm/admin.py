@@ -167,7 +167,7 @@ class ProjectForm(forms.ModelForm):
 
 class ProjectAdmin(admin.ModelAdmin):
     form = ProjectForm
-    list_display = ('contract_name', 'is_confirm', 'status', 'sample_num', 'receive_date',
+    list_display = ('id', 'contract_name', 'is_confirm', 'status', 'sample_num', 'receive_date',
                     'contract_node', 'ext_status', 'qc_status', 'lib_status', 'seq_status', 'ana_status',
                     'report_sub', 'result_sub', 'data_sub')
     # list_editable = ['is_confirm']
