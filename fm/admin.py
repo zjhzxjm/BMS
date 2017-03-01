@@ -5,17 +5,20 @@ from django.contrib import messages
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
 from django.forms.models import BaseInlineFormSet
+from daterange_filter.filter import DateRangeFilter
 
 
 class InvoiceChangeList(ChangeList):
     def get_results(self, *args, **kwargs):
         super(InvoiceChangeList, self).get_results(*args, **kwargs)
+        self.sum = []
         q_income = self.result_list.aggregate(income_sum=Sum('bill__income'))
         q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__invoice__invoice__amount'))
         try:
-            self.receivable_sum = q_amount['amount_sum'] - (q_income['income_sum'] or 0)
+            receivable_sum = (q_amount['amount_sum'] or 0) - (q_income['income_sum'] or 0)
+            self.sum = [receivable_sum, q_income['income_sum']]
         except KeyError:
-            self.receivable_sum = ''
+            self.sum = ['', '']
 
 
 class BillInlineFormSet(BaseInlineFormSet):
@@ -37,11 +40,12 @@ class BillInline(admin.TabularInline):
 
 
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_contract_number', 'invoice_contract_name', 'invoice_period', 'invoice_title',
-                    'invoice_amount', 'bill_income', 'bill_receivable', 'invoice_code', 'date', 'tracking_number',
-                    'send_date')
+    list_display = ('invoice_contract_number', 'invoice_contract_name', 'contract_amount', 'invoice_period',
+                    'invoice_title', 'invoice_amount', 'income_date', 'bill_receivable', 'invoice_code',
+                    'date', 'tracking_number', 'send_date')
     list_display_links = ['invoice_title', 'invoice_amount']
-    date_hierarchy = 'date'
+    list_filter = [('income_date', DateRangeFilter), ('date', DateRangeFilter)]
+    # date_hierarchy = 'date'
     search_fields = ['invoice__title']
     inlines = [
         BillInline,
@@ -58,15 +62,6 @@ class InvoiceAdmin(admin.ModelAdmin):
         })
     )
 
-    def get_list_display_links(self, request, list_display):
-        # 没有删除发票权限人员，取消入口
-        if not request.user.has_perm('fm.delete_invoice'):
-            return None
-        return ['invoice_title', 'invoice_amount']
-
-    def get_changelist(self, request):
-        return InvoiceChangeList
-
     def invoice_contract_number(self, obj):
         return obj.invoice.contract.contract_number
     invoice_contract_number.short_description = '合同号'
@@ -74,6 +69,11 @@ class InvoiceAdmin(admin.ModelAdmin):
     def invoice_contract_name(self, obj):
         return obj.invoice.contract.name
     invoice_contract_name.short_description = '合同名'
+
+    def contract_amount(self, obj):
+        amount = obj.invoice.contract.fis_amount + obj.invoice.contract.fin_amount
+        return amount
+    contract_amount.short_description = '合同额'
 
     def invoice_period(self, obj):
         return obj.invoice.get_period_display()
@@ -91,10 +91,10 @@ class InvoiceAdmin(admin.ModelAdmin):
         return obj.invoice.note
     invoice_note.short_description = '备注'
 
-    def bill_income(self, obj):
-        current_income_amounts = Bill.objects.filter(invoice__id=obj.id).values_list('income', flat=True)
-        return sum(current_income_amounts)
-    bill_income.short_description = '到账金额'
+    # def bill_income(self, obj):
+    #     current_income_amounts = Bill.objects.filter(invoice__id=obj.id).values_list('income', flat=True)
+    #     return sum(current_income_amounts)
+    # bill_income.short_description = '到账金额'
 
     def bill_receivable(self, obj):
         """
@@ -121,6 +121,9 @@ class InvoiceAdmin(admin.ModelAdmin):
         if instances:
             sum_income = formset.instance.__total__
             invoice_amount = instances[0].invoice.invoice.amount
+            obj_invoice = Invoice.objects.get(invoice_code=instances[-1].invoice)
+            obj_invoice.income_date = instances[-1].date
+            obj_invoice.save()
             if sum_income <= invoice_amount:
                 for instance in instances:
                     instance.save()
@@ -129,6 +132,15 @@ class InvoiceAdmin(admin.ModelAdmin):
                 messages.set_level(request, messages.ERROR)
                 self.message_user(request, '进账总额 %.2f 超过开票金额 %.2f' % (sum_income, invoice_amount),
                                   level=messages.ERROR)
+
+    def get_list_display_links(self, request, list_display):
+        # 没有删除发票权限人员，取消入口
+        if not request.user.has_perm('fm.delete_invoice'):
+            return None
+        return ['invoice_title', 'invoice_amount']
+
+    def get_changelist(self, request):
+        return InvoiceChangeList
 
     def get_actions(self, request):
         # 无删除或新增权限人员取消actions
@@ -178,7 +190,6 @@ class BillChangeList(ChangeList):
 class BillAdmin(admin.ModelAdmin):
     list_display = ('invoice', 'income', 'date')
     raw_id_fields = ['invoice']
-    # list_filter = ['date']
     date_hierarchy = 'date'
 
     def get_changelist(self, request):
@@ -189,11 +200,6 @@ class BillAdmin(admin.ModelAdmin):
         1、无发票单号不能登记
         2、进账必须大于0
         3、进账总额不能超过开票金额
-        :param request:
-        :param obj:
-        :param form:
-        :param change:
-        :return:
         """
         invoice_amount = obj.invoice.invoice.invoice.invoice.amount
         current_invoice_amounts = Bill.objects.filter(invoice=obj.invoice).exclude(id=obj.id).values_list('income', flat=True)

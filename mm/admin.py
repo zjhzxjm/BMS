@@ -8,6 +8,9 @@ from django.db.models import Sum
 from django.utils.html import format_html
 from django import forms
 from django.forms.models import BaseInlineFormSet
+from daterange_filter.filter import DateRangeFilter
+from django.contrib.admin.views.main import ChangeList
+from django.db.models import Sum
 
 
 class InvoiceForm(forms.ModelForm):
@@ -81,6 +84,14 @@ class InvoiceInline(admin.StackedInline):
     fields = ('title', 'period', 'amount', 'note')
 
 
+class ContractChangeList(ChangeList):
+    def get_results(self, *args, **kwargs):
+        super(ContractChangeList, self).get_results(*args, **kwargs)
+        fis_amount = self.result_list.aggregate(fis_sum=Sum('fis_amount'))
+        fin_amount = self.result_list.aggregate(fin_sum=Sum('fin_amount'))
+        self.amount = fis_amount['fis_sum'] + fin_amount['fin_sum']
+
+
 class ContractAdmin(admin.ModelAdmin):
     """
     Admin class for Contract
@@ -89,6 +100,7 @@ class ContractAdmin(admin.ModelAdmin):
                     'send_date', 'tracking_number', 'receive_date', 'file_link')
     list_filter = (
         ('salesman', admin.RelatedOnlyFieldListFilter),
+        ('send_date', DateRangeFilter),
     )
     inlines = [
         InvoiceInline,
@@ -165,6 +177,9 @@ class ContractAdmin(admin.ModelAdmin):
         else:
             self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     make_receive.short_description = '登记所选合同已收到'
+
+    def get_changelist(self, request):
+        return ContractChangeList
 
     def get_list_display_links(self, request, list_display):
         if not request.user.has_perm('mm.delete_contract'):

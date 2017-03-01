@@ -10,6 +10,7 @@ class Invoice(models.Model):
     date = models.DateField('开票日期', null=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     send_date = models.DateField('寄出日期', null=True)
+    income_date = models.DateField('到账日期', null=True)
 
     class Meta:
         verbose_name = '发票管理'

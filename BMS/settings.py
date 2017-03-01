@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'mm',
     'fm',
     'import_export',
+    'daterange_filter',
 ]
 
 MIDDLEWARE = [

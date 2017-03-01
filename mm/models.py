@@ -3,11 +3,19 @@ from django.contrib.auth.models import User
 
 
 class Contract(models.Model):
+    RANGE_CHOICES = (
+        (1, '高于销售底价'),
+        (2, '总监底价'),
+        (3, '低于总监底价'),
+    )
     contract_number = models.CharField('合同号', max_length=15, unique=True)
     name = models.CharField('合同名', max_length=100)
     salesman = models.ForeignKey(User, verbose_name='销售')
     price = models.DecimalField('单价', max_digits=7, decimal_places=2)
-    range = models.CharField('价格区间', max_length=20)
+    range = models.IntegerField(
+        '价格区间',
+        choices=RANGE_CHOICES,
+    )
     fis_amount = models.DecimalField('首款额', max_digits=12, decimal_places=2)
     fis_date = models.DateField('首款到款日', blank=True, null=True)
     fin_amount = models.DecimalField('尾款额', max_digits=12, decimal_places=2)
