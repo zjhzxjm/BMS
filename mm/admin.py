@@ -231,6 +231,8 @@ class ContractAdmin(admin.ModelAdmin):
         """
         if obj.tracking_number and not obj.send_date:
             obj.send_date = datetime.now()
+        elif not obj.tracking_number:
+            obj.send_date = None
         obj.save()
 
 admin.site.register(Contract, ContractAdmin)

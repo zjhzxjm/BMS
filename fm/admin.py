@@ -110,8 +110,12 @@ class InvoiceAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.invoice_code and not obj.date:
             obj.date = datetime.now()
+        elif not obj.invoice_code:
+            obj.date = None
         if obj.tracking_number and not obj.send_date:
             obj.send_date = datetime.now()
+        elif not obj.tracking_number:
+            obj.send_date = None
         obj.save()
 
     def save_formset(self, request, form, formset, change):
