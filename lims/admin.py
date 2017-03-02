@@ -87,7 +87,7 @@ class SampleInfoAdmin(ImportExportModelAdmin):
 
     def get_actions(self, request):
         actions = super(SampleInfoAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_sampleinfo'):
+        if not request.user.has_perm('lims.delete_sampleinfo'):
             actions = None
         return actions
 
@@ -183,12 +183,12 @@ class ExtTaskAdmin(admin.ModelAdmin):
 
     def get_actions(self, request):
         actions = super(ExtTaskAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_exttask'):
+        if not request.user.has_perm('lims.delete_exttask'):
             actions = None
         return actions
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('pm.delete_exttask'):
+        if not request.user.has_perm('lims.delete_exttask'):
             return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date', 'result', 'note']
         return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date']
 
@@ -283,12 +283,12 @@ class QcTaskAdmin(admin.ModelAdmin):
 
     def get_actions(self, request):
         actions = super(QcTaskAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_qctask'):
+        if not request.user.has_perm('lims.delete_qctask'):
             actions = None
         return actions
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('pm.delete_qctask'):
+        if not request.user.has_perm('lims.delete_qctask'):
             return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date', 'volume',
                     'concentration', 'total', 'result', 'note']
         return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date']
@@ -389,12 +389,12 @@ class LibTaskAdmin(admin.ModelAdmin):
 
     def get_actions(self, request):
         actions = super(LibTaskAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.delete_libtask'):
+        if not request.user.has_perm('lims.delete_libtask'):
             actions = None
         return actions
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('pm.delete_libtask'):
+        if not request.user.has_perm('lims.delete_libtask'):
             return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date', 'type',
                     'sample_code', 'lib_code', 'index', 'length', 'volume', 'concentration', 'total', 'result', 'note']
         return ['contract', 'contract_name', 'project', 'customer', 'sample_name', 'receive_date']
