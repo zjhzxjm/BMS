@@ -35,9 +35,9 @@ class SampleInfo(models.Model):
     name = models.CharField('样品名称', max_length=50)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3)
-    receive_date = models.DateField('收样时间', auto_now_add=True)
+    receive_date = models.DateField('收样日期', auto_now_add=True)
     check = models.NullBooleanField('样品核对', null=True)
-    note = models.TextField('备注', blank=True)
+    note = models.TextField('备注', blank=True, null=True)
 
     objects = models.Manager()
     is_ext_objects = IsExtManager()
@@ -59,7 +59,8 @@ class ExtTask(models.Model):
         verbose_name='样品',
         on_delete=models.CASCADE,
     )
-    date = models.DateField('提取时间', null=True)
+    sub_date = models.DateField('下单日期')
+    date = models.DateField('提取日期', null=True)
     staff = models.ForeignKey(
         User,
         verbose_name='实验员',
@@ -78,6 +79,7 @@ class ExtTask(models.Model):
 
 class QcTask(models.Model):
     RESULTS_CHOICES = (
+        (0, '待质检'),
         (1, '合格'),
         (2, '不合格（可风险建库）'),
         (3, '不合格（不可风险建库）'),
@@ -87,7 +89,8 @@ class QcTask(models.Model):
         verbose_name='样品',
         on_delete=models.CASCADE,
     )
-    date = models.DateField('质检时间', null=True)
+    sub_date = models.DateField('下单日期')
+    date = models.DateField('质检日期', null=True)
     staff = models.ForeignKey(
         User,
         verbose_name='实验员',
@@ -117,7 +120,8 @@ class LibTask(models.Model):
         verbose_name='样品',
         on_delete=models.CASCADE,
     )
-    date = models.DateField('建库时间', null=True)
+    sub_date = models.DateField('下单日期')
+    date = models.DateField('建库日期', null=True)
     staff = models.ForeignKey(
         User,
         verbose_name='实验员',

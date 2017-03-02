@@ -275,7 +275,8 @@ class ProjectAdmin(admin.ModelAdmin):
             if left >= 0:
                 return '%s-提前%s天' % (obj.ext_date.strftime('%Y%m%d'), left)
             else:
-                return format_html('<span style="color:{};">{}</span>', 'red', '%s-延%s天' % (obj.ext_date.strftime('%Y%m%d'), -left))
+                return format_html('<span style="color:{};">{}</span>', 'red', '%s-延%s天' %
+                                   (obj.ext_date.strftime('%Y%m%d'), -left))
     ext_status.short_description = '提取进度'
 
     def qc_status(self, obj):
@@ -457,7 +458,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
             obj.date = date.today()
             projects = []
             for sample in form.instance.__sample__:
-                ExtTask.objects.create(sample=sample)
+                ExtTask.objects.create(sample=sample, sub_date=date.today())
                 projects.append(sample.project)
             for i in set(projects):
                 if not i.due_date:
@@ -511,7 +512,7 @@ class QcSubmitAdmin(admin.ModelAdmin):
             obj.date = date.today()
             projects = []
             for sample in form.instance.__sample__:
-                QcTask.objects.create(sample=sample)
+                QcTask.objects.create(sample=sample, sub_date=date.today())
                 projects.append(sample.project)
             for i in set(projects):
                 if not i.due_date:
@@ -565,7 +566,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
             obj.date = date.today()
             projects = []
             for sample in form.instance.__sample__:
-                LibTask.objects.create(sample=sample)
+                LibTask.objects.create(sample=sample, sub_date=date.today())
                 projects.append(sample.project)
             for i in set(projects):
                 if not i.due_date:
