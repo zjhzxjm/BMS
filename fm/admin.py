@@ -6,6 +6,7 @@ from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
 from django.forms.models import BaseInlineFormSet
 from daterange_filter.filter import DateRangeFilter
+from django.contrib.auth.models import User
 
 
 class InvoiceChangeList(ChangeList):
@@ -39,13 +40,41 @@ class BillInline(admin.TabularInline):
     extra = 1
 
 
+class SaleListFilter(admin.SimpleListFilter):
+    title = '业务员'
+    parameter_name = 'Sale'
+
+    def lookups(self, request, model_admin):
+        qs_sale = User.objects.filter(groups__id=3)
+        qs_company = User.objects.filter(groups__id=6)
+        value = ['sale'] + list(qs_sale.values_list('username', flat=True)) + \
+                ['company'] + list(qs_company.values_list('username', flat=True))
+        label = ['销售'] + ['——' + i.last_name + i.first_name for i in qs_sale] + \
+                ['公司'] + ['——' + i.last_name + i.first_name for i in qs_company]
+        return tuple(zip(value, label))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'sale':
+            return queryset.filter(invoice__contract__salesman__in=list(User.objects.filter(groups__id=3)))
+        if self.value() == 'company':
+            return queryset.filter(invoice__contract__salesman__in=list(User.objects.filter(groups__in=6)))
+        qs = User.objects.filter(groups__in=[3, 6])
+        for i in qs:
+            if self.value() == i.username:
+                return queryset.filter(invoice__contract__salesman=i)
+
+
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_contract_number', 'invoice_contract_name', 'contract_amount', 'invoice_period',
-                    'invoice_title', 'invoice_amount', 'income_date', 'bill_receivable', 'invoice_code',
-                    'date', 'tracking_number', 'send_date')
+    list_display = ('invoice_contract_number', 'invoice_contract_name', 'contract_amount', 'salesman_name',
+                    'contract_type', 'invoice_period', 'invoice_title', 'invoice_amount', 'income_date',
+                    'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date')
     list_display_links = ['invoice_title', 'invoice_amount']
-    list_filter = [('income_date', DateRangeFilter), ('date', DateRangeFilter)]
-    # date_hierarchy = 'date'
+    list_filter = [
+        SaleListFilter,
+        'invoice__contract__type',
+        ('income_date', DateRangeFilter),
+        ('date', DateRangeFilter)
+    ]
     search_fields = ['invoice__title']
     inlines = [
         BillInline,
@@ -74,6 +103,17 @@ class InvoiceAdmin(admin.ModelAdmin):
         amount = obj.invoice.contract.fis_amount + obj.invoice.contract.fin_amount
         return amount
     contract_amount.short_description = '合同额'
+
+    def salesman_name(self, obj):
+        name = obj.invoice.contract.salesman.last_name + obj.invoice.contract.salesman.first_name
+        if name:
+            return name
+        return obj.invoice.contract.salesman
+    salesman_name.short_description = '业务员'
+
+    def contract_type(self, obj):
+        return obj.invoice.contract.get_type_display()
+    contract_type.short_description = '类型'
 
     def invoice_period(self, obj):
         return obj.invoice.get_period_display()

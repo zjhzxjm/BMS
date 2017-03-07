@@ -4,13 +4,13 @@ from fm.models import Invoice as fm_Invoice
 from fm.models import Bill
 from django.contrib import messages
 from datetime import datetime
-from django.db.models import Sum
 from django.utils.html import format_html
 from django import forms
 from django.forms.models import BaseInlineFormSet
 from daterange_filter.filter import DateRangeFilter
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
+from django.contrib.auth.models import User
 
 
 class InvoiceForm(forms.ModelForm):
@@ -89,17 +89,42 @@ class ContractChangeList(ChangeList):
         super(ContractChangeList, self).get_results(*args, **kwargs)
         fis_amount = self.result_list.aggregate(fis_sum=Sum('fis_amount'))
         fin_amount = self.result_list.aggregate(fin_sum=Sum('fin_amount'))
-        self.amount = fis_amount['fis_sum'] + fin_amount['fin_sum']
+        self.amount = (fis_amount['fis_sum'] or 0) + (fin_amount['fin_sum'] or 0)
+
+
+class SaleListFilter(admin.SimpleListFilter):
+    title = '业务员'
+    parameter_name = 'Sale'
+
+    def lookups(self, request, model_admin):
+        qs_sale = User.objects.filter(groups__id=3)
+        qs_company = User.objects.filter(groups__id=6)
+        value = ['sale'] + list(qs_sale.values_list('username', flat=True)) + \
+                ['company'] + list(qs_company.values_list('username', flat=True))
+        label = ['销售'] + ['——' + i.last_name + i.first_name for i in qs_sale] + \
+                ['公司'] + ['——' + i.last_name + i.first_name for i in qs_company]
+        return tuple(zip(value, label))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'sale':
+            return queryset.filter(salesman__in=list(User.objects.filter(groups__id=3)))
+        if self.value() == 'company':
+            return queryset.filter(salesman__in=list(User.objects.filter(groups__id=6)))
+        qs = User.objects.filter(groups__in=[3, 6])
+        for i in qs:
+            if self.value() == i.username:
+                return queryset.filter(salesman=i)
 
 
 class ContractAdmin(admin.ModelAdmin):
     """
     Admin class for Contract
     """
-    list_display = ('contract_number', 'name', 'salesman_name', 'price', 'range', 'total', 'fis_income', 'fin_income',
-                    'send_date', 'tracking_number', 'receive_date', 'file_link')
+    list_display = ('contract_number', 'name', 'type', 'salesman_name', 'price', 'range', 'total', 'fis_income',
+                    'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     list_filter = (
-        ('salesman', admin.RelatedOnlyFieldListFilter),
+        SaleListFilter,
+        'type',
         ('send_date', DateRangeFilter),
     )
     inlines = [
@@ -108,7 +133,7 @@ class ContractAdmin(admin.ModelAdmin):
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'salesman', ('price', 'range'), ('fis_amount', 'fin_amount'))
+            'fields': ('contract_number', 'name', 'type', 'salesman', ('price', 'range'), ('fis_amount', 'fin_amount'))
         }),
         ('邮寄信息', {
             'fields': ('tracking_number',)
@@ -127,7 +152,7 @@ class ContractAdmin(admin.ModelAdmin):
         if name:
             return name
         return obj.salesman
-    salesman_name.short_description = '销售'
+    salesman_name.short_description = '业务员'
 
     def total(self, obj):
         # 总款计算并显示

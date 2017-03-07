@@ -8,9 +8,20 @@ class Contract(models.Model):
         (2, '总监底价'),
         (3, '低于总监底价'),
     )
+    TYPE_CHOICES = (
+        (1, '16S/ITS'),
+        (2, '宏基因组'),
+        (3, '单菌'),
+        (4, '转录组'),
+        (5, '其它'),
+    )
     contract_number = models.CharField('合同号', max_length=15, unique=True)
     name = models.CharField('合同名', max_length=100)
-    salesman = models.ForeignKey(User, verbose_name='销售')
+    type = models.IntegerField(
+        '类型',
+        choices=TYPE_CHOICES,
+    )
+    salesman = models.ForeignKey(User, verbose_name='业务员')
     price = models.DecimalField('单价', max_digits=7, decimal_places=2)
     range = models.IntegerField(
         '价格区间',
