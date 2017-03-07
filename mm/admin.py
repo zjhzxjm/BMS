@@ -122,11 +122,6 @@ class ContractAdmin(admin.ModelAdmin):
     """
     list_display = ('contract_number', 'name', 'type', 'salesman_name', 'price', 'range', 'total', 'fis_income',
                     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
-    list_filter = (
-        SaleListFilter,
-        'type',
-        ('send_date', DateRangeFilter),
-    )
     inlines = [
         InvoiceInline,
     ]
@@ -136,7 +131,7 @@ class ContractAdmin(admin.ModelAdmin):
             'fields': ('contract_number', 'name', 'type', 'salesman', ('price', 'range'), ('fis_amount', 'fin_amount'))
         }),
         ('邮寄信息', {
-            'fields': ('tracking_number',)
+            'fields': ('tracking_number', 'send_date', 'receive_date')  # 历史数据添加时临时调取'send_date'和'receive_date'
         }),
         ('上传合同', {
             'fields': ('contract_file',)
@@ -234,6 +229,18 @@ class ContractAdmin(admin.ModelAdmin):
         if request.user.is_superuser or request.user.has_perm('mm.add_contract'):
             return qs
         return qs.filter(salesman=request.user)
+
+    def get_list_filter(self, request):
+        if request.user.is_superuser or request.user.has_perm('mm.add_contract'):
+            return [
+                SaleListFilter,
+                'type',
+                ('send_date', DateRangeFilter),
+            ]
+        return [
+            'type',
+            ('send_date', DateRangeFilter),
+        ]
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)

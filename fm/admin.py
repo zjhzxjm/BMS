@@ -69,12 +69,6 @@ class InvoiceAdmin(admin.ModelAdmin):
                     'contract_type', 'invoice_period', 'invoice_title', 'invoice_amount', 'income_date',
                     'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date')
     list_display_links = ['invoice_title', 'invoice_amount']
-    list_filter = [
-        SaleListFilter,
-        'invoice__contract__type',
-        ('income_date', DateRangeFilter),
-        ('date', DateRangeFilter)
-    ]
     search_fields = ['invoice__title']
     inlines = [
         BillInline,
@@ -84,10 +78,10 @@ class InvoiceAdmin(admin.ModelAdmin):
            'fields': ('invoice_title', 'invoice_amount', 'invoice_note')
         }),
         ('开票信息', {
-            'fields': ('invoice_code', )
+            'fields': ('invoice_code', 'date')  # 历史数据添加时临时调取'date'
         }),
         ('邮寄信息', {
-            'fields': ('tracking_number', )
+            'fields': ('tracking_number', 'send_date')  # 历史数据添加时临时调取'send_date'
         })
     )
 
@@ -213,6 +207,20 @@ class InvoiceAdmin(admin.ModelAdmin):
         if request.user.is_superuser or request.user.has_perm('fm.delete_invoice'):
             return qs
         return qs.filter(invoice__contract__salesman=request.user)
+
+    def get_list_filter(self, request):
+        if request.user.is_superuser or request.user.has_perm('fm.delete_invoice'):
+            return [
+                SaleListFilter,
+                'invoice__contract__type',
+                ('income_date', DateRangeFilter),
+                ('date', DateRangeFilter)
+            ]
+        return [
+            'invoice__contract__type',
+            ('income_date', DateRangeFilter),
+            ('date', DateRangeFilter)
+        ]
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
