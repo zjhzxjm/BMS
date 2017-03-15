@@ -202,7 +202,7 @@ class ContractAdmin(admin.ModelAdmin):
         return ContractChangeList
 
     def get_list_display_links(self, request, list_display):
-        if not request.user.has_perm('mm.delete_contract'):
+        if not request.user.has_perm('mm.add_contract'):
             return
         return ['contract_number']
 
