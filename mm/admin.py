@@ -246,6 +246,7 @@ class ContractAdmin(admin.ModelAdmin):
         if not request.user.has_perm('mm.delete_contract'):
             return ['contract_number', 'name', 'type', 'salesman', 'price', 'range', 'fis_amount', 'fin_amount',
                     'tracking_number', 'send_date', 'receive_date', 'contract_file']
+        return []
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
