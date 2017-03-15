@@ -242,6 +242,11 @@ class ContractAdmin(admin.ModelAdmin):
             ('send_date', DateRangeFilter),
         ]
 
+    def get_readonly_fields(self, request, obj=None):
+        if not request.user.has_perm('mm.delete_contract'):
+            return ['contract_number', 'name', 'type', 'salesman', 'price', 'range', 'fis_amount', 'fin_amount',
+                    'tracking_number', 'send_date', 'receive_date', 'contract_file']
+
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for obj in formset.deleted_objects:
