@@ -35,7 +35,7 @@ class SampleInfo(models.Model):
     name = models.CharField('样品名称', max_length=50)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3)
     concentration = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3)
-    receive_date = models.DateField('收样日期', auto_now_add=True)
+    receive_date = models.DateField('收样日期')
     check = models.NullBooleanField('样品核对', null=True)
     note = models.TextField('备注', blank=True, null=True)
 

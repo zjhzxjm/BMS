@@ -26,7 +26,7 @@ def add_business_days(from_date, number_of_days):
 class SampleInfoResource(resources.ModelResource):
     class Meta:
         model = SampleInfo
-        exclude = ('receive_date', 'check', 'note')
+        exclude = ('check', 'note')
         skip_unchanged = True
 
 
@@ -95,7 +95,7 @@ class SampleInfoAdmin(ImportExportModelAdmin):
         if not request.user.has_perm('lims.delete_sampleinfo'):
             return ['contract', 'contract_name', 'project', 'customer', 'name', 'receive_date', 'type', 'species',
                     'volume', 'concentration', 'check', 'note']
-        return ['contract', 'contract_name', 'customer', 'receive_date']
+        return ['contract', 'contract_name', 'customer']
 
 
 class ExtTaskForm(forms.ModelForm):
