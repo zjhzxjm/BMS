@@ -100,6 +100,8 @@ class ProjectForm(forms.ModelForm):
             return
         project = Project.objects.filter(contract=self.cleaned_data['contract']).filter(name=self.cleaned_data['name'])\
             .first()
+        if project.is_confirm == 0:
+            raise forms.ValidationError('项目尚未启动，请留空')
         if not project.is_lib:
             return self.cleaned_data['seq_start_date']
         lib_date = project.lib_date
@@ -133,7 +135,7 @@ class ProjectForm(forms.ModelForm):
             return
         if 'ana_start_date' not in self.cleaned_data.keys() or not self.cleaned_data['ana_start_date']:
             raise forms.ValidationError('尚未记录分析开始日期')
-        elif self.cleaned_data['ana_start_date'] > self.cleaned_data['seq_end_date']:
+        elif self.cleaned_data['ana_start_date'] > self.cleaned_data['ana_end_date']:
             raise forms.ValidationError('完成日期不能早于开始日期')
         return self.cleaned_data['ana_end_date']
 
