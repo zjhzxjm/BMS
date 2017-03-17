@@ -159,7 +159,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         if instances:
             sum_income = formset.instance.__total__
             invoice_amount = instances[0].invoice.invoice.amount
-            obj_invoice = Invoice.objects.get(invoice_code=instances[-1].invoice)
+            obj_invoice = Invoice.objects.get(id=instances[-1].invoice_id)
             obj_invoice.income_date = instances[-1].date
             obj_invoice.save()
             if sum_income <= invoice_amount:
