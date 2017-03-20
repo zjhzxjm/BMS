@@ -57,7 +57,7 @@ class SaleListFilter(admin.SimpleListFilter):
         if self.value() == 'sale':
             return queryset.filter(invoice__contract__salesman__in=list(User.objects.filter(groups__id=3)))
         if self.value() == 'company':
-            return queryset.filter(invoice__contract__salesman__in=list(User.objects.filter(groups__in=6)))
+            return queryset.filter(invoice__contract__salesman__in=list(User.objects.filter(groups__id=6)))
         qs = User.objects.filter(groups__in=[3, 6])
         for i in qs:
             if self.value() == i.username:
